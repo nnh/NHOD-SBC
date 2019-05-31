@@ -103,7 +103,7 @@ proc sort data=saihi; by SUBJID; run;
 
 %mend COUNT;
 
-/*
+	/*
     %COUNT (oxygen, oxygen, “o˜^—á, saihi);
 */
 proc sql;
@@ -113,10 +113,23 @@ proc sql;
 		count num,
 		percent num
 	);
-	insert into N (Item, Category, count, percent)
-	select '“o˜^—á', 'N', count(*), 0 from saihi;
-	insert into N (Item, Category, count, percent)
-	select '—LŒø«‰ğÍ‘ÎÛW’c', 'N', count(*), 0 from saihi where EFFICACY = 1;
+	select count(*) into: count_n from saihi;
+	insert into N
+		values('“o˜^”', 'N', &count_n., 0);
 quit;
-
+data saihi_efficacy;
+	set saihi;
+	if EFFICACY=1;
+run;
+proc freq data=saihi_efficacy noprint;
+    tables EFFICACY / out=efficacy;
+run;
+proc sql;
+	insert into N (Item, Category, count, percent)
+		select '—LŒø«‰ğÍ‘ÎÛW’c', '', count, percent from EFFICACY;
+quit;
 *¡–üØœEnon-Chemotherapy‚Ì‰ğÍ‘ÎÛW’c;
+data saihi_ope_non_chemo;
+	set saihi;
+	if ANALYSIS_SET='¡–üØœEnon-ChemotherapyŒQ';
+run;
