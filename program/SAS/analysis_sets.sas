@@ -10,6 +10,8 @@ proc datasets library=work kill nolist; quit;
 options mprint mlogic symbolgen minoperator noautocorrect;
 *Define constants;
 %let template_ds_name=%str(Output_ds_template);
+*saihi.csv;
+%let input_csv=test.csv;
 **************************************************************************;
 *Define macros;
 %macro GET_THISFILE_FULLPATH;
@@ -36,6 +38,13 @@ options mprint mlogic symbolgen minoperator noautocorrect;
     &_path.
 %mend GET_DIRECTORY_PATH;
 
+%macro INSERT_SQL(input_ds, item_name, count_str, percent_n, output_ds);
+	proc sql;
+		insert into &output_ds. (Item, Category, count, percent)
+			select '', &item_name., &count_str., ((&count_str. / &percent_n.) * 100) from &input_ds.;
+	quit;
+%mend INSERT_SQL;
+
 %macro INSERT_COUNT_N(input_ds, input_var, condition_string, item_name, percent_n, output_ds);
 	%local temp_ds output_ds;
 	%let temp_ds=&input_ds._&input_var.;
@@ -54,10 +63,7 @@ options mprint mlogic symbolgen minoperator noautocorrect;
 	proc freq data=&temp_ds. noprint;
     tables &input_var. / out=&output_freq.;
 	run;
-	proc sql;
-	insert into &output_ds. (Item, Category, count, percent)
-		select &item_name., '', count, ((count / &count_n.) * 100) from &output_freq.;
-	quit;
+	%INSERT_SQL(&output_freq., &item_name., count, &count_n., &output_ds.);
 %mend INSERT_COUNT_N;
 
 **************************************************************************;
@@ -65,8 +71,6 @@ options mprint mlogic symbolgen minoperator noautocorrect;
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
 %let extpath=&projectpath.\input\ext;
 %let outpath=&projectpath.\output;
-*saihi.csv;
-%let input_csv=test.csv;
 **************************************************************************;
 proc import datafile="&extpath.\&input_csv."
                     out=saihi
@@ -85,7 +89,7 @@ proc sort data=saihi; by SUBJID; run;
 proc sql;
 	create table &template_ds_name. (
 		Item char(200) ,
-		Category char(10),
+		Category char(200),
 		count num,
 		percent num
 	);
@@ -98,30 +102,25 @@ run;
 proc sql;
 	select count(*) into: count_n from saihi;
 	insert into ds_N
-		values('“o˜^”', 'N', &count_n., 0);
+		values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
 %INSERT_COUNT_N(saihi,  EFFICACY, 1,  '—LŒø«‰ğÍ‘ÎÛW’c', &count_n., ds_N)
 %INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–üØœEnon-ChemotherapyŒQ',  '¡–üØœEnon-ChemotherapyŒQ', & count_n., saihi_ope)
 %INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–üØœEChemotherapyŒQ',  '¡–üØœEChemotherapyŒQ', & count_n., saihi_ope)
-proc sql;
-	insert into ds_N
-	select '¡–üØœ‚Ì‰ğÍ‘ÎÛW’c', '', sum(count), (sum(count) / &count_n.) * 100 from saihi_ope;
-quit;
-data ds_N;
-	set ds_N saihi_ope;
-run;
+%INSERT_SQL(saihi_ope, '¡–üØœ‚Ì‰ğÍ‘ÎÛW’c', %str(sum(count)), &count_n., ds_N);
 %INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–ü–¢ØœEnon-ChemotherapyŒQ',  '¡–ü–¢ØœEnon-ChemotherapyŒQ', & count_n., saihi_non_ope)
 %INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–ü–¢ØœEChemotherapyŒQ',  '¡–ü–¢ØœEChemotherapyŒQ', & count_n., saihi_non_ope)
-proc sql;
-	insert into ds_N
-	select '¡–ü–¢Øœ‚Ì‰ğÍ‘ÎÛW’c', '', sum(count), (sum(count) / &count_n.) * 100 from saihi_non_ope;
-quit;
+%INSERT_SQL(saihi_non_ope, '¡–ü–¢Øœ‚Ì‰ğÍ‘ÎÛW’c', %str(sum(count)), &count_n., ds_N);
+
 data ds_N;
-	set ds_N saihi_non_ope;
+	set ds_N saihi_ope saihi_non_ope;
 run;
 
 %ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
 
 *Delete the working dataset;
-proc datasets lib=work nolist; save ds_n; quit;
+/*proc datasets lib=work nolist; save ds_n; quit;*/
+
+
+
