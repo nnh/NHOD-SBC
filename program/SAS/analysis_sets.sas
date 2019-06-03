@@ -12,6 +12,12 @@ options mprint mlogic symbolgen minoperator noautocorrect;
 %let template_ds_name=%str(Output_ds_template);
 *saihi.csv;
 %let input_csv=test.csv;
+%let str_t1='¡–üØœ‚Ì‰ğÍ‘ÎÛW’c';
+%let str_t2='¡–üØœEChemotherapyŒQ';
+%let str_t3='¡–üØœEnon-ChemotherapyŒQ';
+%let str_t4='¡–ü–¢Øœ‚Ì‰ğÍ‘ÎÛW’c';
+%let str_t5='¡–ü–¢ØœEChemotherapyŒQ';
+%let str_t6='¡–ü–¢ØœEnon-ChemotherapyŒQ';
 **************************************************************************;
 *Define macros;
 %macro GET_THISFILE_FULLPATH;
@@ -38,33 +44,12 @@ options mprint mlogic symbolgen minoperator noautocorrect;
     &_path.
 %mend GET_DIRECTORY_PATH;
 
-%macro INSERT_SQL(input_ds, item_name, count_str, percent_n, output_ds);
+%macro INSERT_SQL(input_ds, output_ds, item, cat, cnt, per, cond_var, cond_str);
 	proc sql;
-		insert into &output_ds. (Item, Category, count, percent)
-			select '', &item_name., &count_str., ((&count_str. / &percent_n.) * 100) from &input_ds.;
+		insert into &output_ds.
+		select &item., &cat., &cnt., &per. from &input_ds. where &cond_var. = &cond_str.; 
 	quit;
 %mend INSERT_SQL;
-
-%macro INSERT_COUNT_N(input_ds, input_var, condition_string, item_name, percent_n, output_ds);
-	%local temp_ds output_ds;
-	%let temp_ds=&input_ds._&input_var.;
-	%let output_freq=&input_var.;
-	*Create a dataset if it does not exist;
-	%if %sysfunc(exist(&output_ds.))=0 %then %do;
-		data &output_ds.;
-			set  &template_ds_name.;
-		run;
-	%end;
-	data &temp_ds.;
-		set &input_ds.;
-		if &input_var.=&condition_string.;
-	run;
-	*Count;
-	proc freq data=&temp_ds. noprint;
-    tables &input_var. / out=&output_freq.;
-	run;
-	%INSERT_SQL(&output_freq., &item_name., count, &count_n., &output_ds.);
-%mend INSERT_COUNT_N;
 
 **************************************************************************;
 %let thisfile=%GET_THISFILE_FULLPATH;
@@ -79,48 +64,64 @@ run;
 
 data saihi;
     set saihi;
-    SUBJID=input(VAR1, best12.);
-	rename VAR2=ANALYSIS_SET VAR3=EFFICACY VAR4=SAFETY;
+    subjid=input(VAR1, best12.);
+	rename VAR2=analysis_set VAR3=efficacy VAR4=safety;
+	format analysis_group  $24.;
+	if substr(VAR2, 1, 8)='¡–üØœ' then do;
+		analysis_group=&str_t1.;
+	end;
+	else if substr(VAR2, 1, 10)='¡–ü–¢Øœ' then do;
+		analysis_group=&str_t4.;
+	end;
     drop VAR1;
 run;
 
-proc sort data=saihi; by SUBJID; run;
+proc sort data=saihi; by subjid; run;
 
 proc sql;
-	create table &template_ds_name. (
+	create table ds_N (
 		Item char(200) ,
 		Category char(200),
 		count num,
-		percent num
-	);
+		percent num);
 quit;
 
-data ds_N;
-	set &template_ds_name.;
-run;
-
-proc sql;
+proc sql noprint;
 	select count(*) into: count_n from saihi;
 	insert into ds_N
 		values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
-%INSERT_COUNT_N(saihi,  EFFICACY, 1,  '—LŒø«‰ğÍ‘ÎÛW’c', &count_n., ds_N)
-%INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–üØœEnon-ChemotherapyŒQ',  '¡–üØœEnon-ChemotherapyŒQ', & count_n., saihi_ope)
-%INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–üØœEChemotherapyŒQ',  '¡–üØœEChemotherapyŒQ', & count_n., saihi_ope)
-%INSERT_SQL(saihi_ope, '¡–üØœ‚Ì‰ğÍ‘ÎÛW’c', %str(sum(count)), &count_n., ds_N);
-%INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–ü–¢ØœEnon-ChemotherapyŒQ',  '¡–ü–¢ØœEnon-ChemotherapyŒQ', & count_n., saihi_non_ope)
-%INSERT_COUNT_N(saihi,  ANALYSIS_SET, '¡–ü–¢ØœEChemotherapyŒQ',  '¡–ü–¢ØœEChemotherapyŒQ', & count_n., saihi_non_ope)
-%INSERT_SQL(saihi_non_ope, '¡–ü–¢Øœ‚Ì‰ğÍ‘ÎÛW’c', %str(sum(count)), &count_n., ds_N);
-
-data ds_N;
-	set ds_N saihi_ope saihi_non_ope;
+proc freq data=saihi;
+ 	tables efficacy/ missing out=efficacy;
 run;
+
+proc freq data=saihi;
+ 	tables analysis_set/ missing out=analysis_set;
+run;
+
+proc freq data=saihi;
+ 	tables analysis_group/ missing out=analysis_group;
+run;
+
+data analysis; 
+	set 	analysis_set(rename=(analysis_set=analysis))
+			analysis_group(rename=(analysis_group=analysis));
+run;
+
+%INSERT_SQL(efficacy, ds_N, '', '—LŒø«‰ğÍ‘ÎÛW’c', count, percent, efficacy, 1);
+%INSERT_SQL(analysis, ds_N, '', &str_t1., count, percent, analysis, &str_t1.);
+%INSERT_SQL(analysis, ds_N, '', &str_t2., count, percent, analysis, &str_t2.);
+%INSERT_SQL(analysis, ds_N, '', &str_t3., count, percent, analysis, &str_t3.);
+%INSERT_SQL(analysis, ds_N, '', &str_t4., count, percent, analysis, &str_t4.);
+%INSERT_SQL(analysis, ds_N, '', &str_t5., count, percent, analysis, &str_t5.);
+%INSERT_SQL(analysis, ds_N, '', &str_t6., count, percent, analysis, &str_t6.);
 
 %ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
 
 *Delete the working dataset;
-/*proc datasets lib=work nolist; save ds_n; quit;*/
+proc datasets lib=work nolist; save ds_n; quit;
+
 
 
 
