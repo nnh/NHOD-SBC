@@ -5,9 +5,7 @@ Author : Ohtsuka Mariko
 Date : 2019-05-30
 SAS version : 9.4
 **************************************************************************;
-proc datasets library=work kill nolist; quit;
-
-options mprint mlogic symbolgen minoperator noautocorrect;
+*Define constants;
 *saihi.csv;
 %let input_csv=test.csv;
 %let str_t1='é°ñ¸êÿèúÇÃâêÕëŒè€èWíc';
@@ -42,23 +40,10 @@ options mprint mlogic symbolgen minoperator noautocorrect;
     &_path.
 %mend GET_DIRECTORY_PATH;
 
-%macro INSERT_SQL(input_ds, output_ds, item, cat, cnt, per, cond_var, cond_str);
-	%local sql_str;
-	%let sql_str=%str(select &item., &cat., &cnt., &per. from &input_ds.);
-	%if &cond_var.^=. %then %do;
-		%let sql_str=&sql_str.%str( where &cond_var. = &cond_str.);
-	%end;
-	proc sql;
-		insert into &output_ds.
-		&sql_str.; 
-	quit;
-%mend INSERT_SQL;
-
 **************************************************************************;
 %let thisfile=%GET_THISFILE_FULLPATH;
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
-%let extpath=&projectpath.\input\ext;
-%let outpath=&projectpath.\output;
+%inc "&projectpath.\program\macro\libname.sas";
 **************************************************************************;
 proc import datafile="&extpath.\&input_csv."
                     out=saihi
