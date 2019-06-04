@@ -8,12 +8,6 @@ SAS version : 9.4
 *Define constants;
 *saihi.csv;
 %let input_csv=test.csv;
-%let str_t1='¡–üØœ‚Ì‰ğÍ‘ÎÛW’c';
-%let str_t2='¡–üØœEChemotherapyŒQ';
-%let str_t3='¡–üØœEnon-ChemotherapyŒQ';
-%let str_t4='¡–ü–¢Øœ‚Ì‰ğÍ‘ÎÛW’c';
-%let str_t5='¡–ü–¢ØœEChemotherapyŒQ';
-%let str_t6='¡–ü–¢ØœEnon-ChemotherapyŒQ';
 **************************************************************************;
 *Define macros;
 %macro GET_THISFILE_FULLPATH;
@@ -56,15 +50,27 @@ data saihi;
 	rename VAR2=analysis_set VAR3=efficacy VAR4=safety;
 	format analysis_group  $24.;
 	if substr(VAR2, 1, 8)='¡–üØœ' then do;
-		analysis_group=&str_t1.;
+		analysis_group=&ope_group.;
 	end;
 	else if substr(VAR2, 1, 10)='¡–ü–¢Øœ' then do;
-		analysis_group=&str_t4.;
+		analysis_group=&non_ope_group.;
 	end;
     drop VAR1;
 run;
 
 proc sort data=saihi; by subjid; run;
+
+data ptdata;
+	set libads.ptdata;
+	temp_subjid=input(subjid, best12.);
+	drop subjid;
+	rename temp_subjid=subjid;
+run;
+
+data ptdata;
+    merge ptdata saihi;
+	by subjid;
+run;
 
 proc sql;
 	create table ds_N (
@@ -75,20 +81,20 @@ proc sql;
 quit;
 
 proc sql noprint;
-	select count(*) into: count_n from saihi;
+	select count(*) into: count_n from ptdata;
 	insert into ds_N
 		values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
-proc freq data=saihi noprint;
+proc freq data=ptdata noprint;
  	tables efficacy/ missing out=efficacy;
 run;
 
-proc freq data=saihi noprint;
+proc freq data=ptdata noprint;
  	tables analysis_set/ missing out=analysis_set;
 run;
 
-proc freq data=saihi noprint;
+proc freq data=ptdata noprint;
  	tables analysis_group/ missing out=analysis_group;
 run;
 
@@ -98,17 +104,17 @@ data analysis;
 run;
 
 %INSERT_SQL(efficacy, ds_N, '', '—LŒø«‰ğÍ‘ÎÛW’c', count, percent, efficacy, 1);
-%INSERT_SQL(analysis, ds_N, '', &str_t1., count, percent, analysis, &str_t1.);
-%INSERT_SQL(analysis, ds_N, '', &str_t2., count, percent, analysis, &str_t2.);
-%INSERT_SQL(analysis, ds_N, '', &str_t3., count, percent, analysis, &str_t3.);
-%INSERT_SQL(analysis, ds_N, '', &str_t4., count, percent, analysis, &str_t4.);
-%INSERT_SQL(analysis, ds_N, '', &str_t5., count, percent, analysis, &str_t5.);
-%INSERT_SQL(analysis, ds_N, '', &str_t6., count, percent, analysis, &str_t6.);
+%INSERT_SQL(analysis, ds_N, '', &ope_group., count, percent, analysis, &ope_group.);
+%INSERT_SQL(analysis, ds_N, '', &ope_chemo., count, percent, analysis, &ope_chemo.);
+%INSERT_SQL(analysis, ds_N, '', &ope_non_chemo., count, percent, analysis, &ope_non_chemo.);
+%INSERT_SQL(analysis, ds_N, '', &non_ope_group., count, percent, analysis, &non_ope_group.);
+%INSERT_SQL(analysis, ds_N, '', &non_ope_chemo., count, percent, analysis, &non_ope_chemo.);
+%INSERT_SQL(analysis, ds_N, '', &non_ope_non_chemo., count, percent, analysis, &non_ope_non_chemo.);
 
 %ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
 
 *Delete the working dataset;
-proc datasets lib=work nolist; save ds_n; quit;
+proc datasets lib=work nolist; save ptdata ds_n; quit;
 
 
 
