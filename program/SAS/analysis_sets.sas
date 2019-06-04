@@ -8,8 +8,6 @@ SAS version : 9.4
 proc datasets library=work kill nolist; quit;
 
 options mprint mlogic symbolgen minoperator noautocorrect;
-*Define constants;
-%let template_ds_name=%str(Output_ds_template);
 *saihi.csv;
 %let input_csv=test.csv;
 %let str_t1='¡–üØœ‚Ì‰ğÍ‘ÎÛW’c';
@@ -45,9 +43,14 @@ options mprint mlogic symbolgen minoperator noautocorrect;
 %mend GET_DIRECTORY_PATH;
 
 %macro INSERT_SQL(input_ds, output_ds, item, cat, cnt, per, cond_var, cond_str);
+	%local sql_str;
+	%let sql_str=%str(select &item., &cat., &cnt., &per. from &input_ds.);
+	%if &cond_var.^=. %then %do;
+		%let sql_str=&sql_str.%str( where &cond_var. = &cond_str.);
+	%end;
 	proc sql;
 		insert into &output_ds.
-		select &item., &cat., &cnt., &per. from &input_ds. where &cond_var. = &cond_str.; 
+		&sql_str.; 
 	quit;
 %mend INSERT_SQL;
 
@@ -92,15 +95,15 @@ proc sql noprint;
 		values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
-proc freq data=saihi;
+proc freq data=saihi noprint;
  	tables efficacy/ missing out=efficacy;
 run;
 
-proc freq data=saihi;
+proc freq data=saihi noprint;
  	tables analysis_set/ missing out=analysis_set;
 run;
 
-proc freq data=saihi;
+proc freq data=saihi noprint;
  	tables analysis_group/ missing out=analysis_group;
 run;
 
