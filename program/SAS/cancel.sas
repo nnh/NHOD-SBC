@@ -38,9 +38,20 @@ SAS version : 9.4
 %inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
 *症例の内訳と中止例集計;
+proc sql;
+	create table ds_cancel (
+		ope_non_chemo_cnt num label='治癒切除・non-chemo 度数',
+		ope_non_chemo_per num label='治癒切除・non-chemo パーセント',
+		ope_chemo_cnt num label='治癒切除・chemo 度数',
+		ope_chemo_per num label='治癒切除・chemo パーセント',
+		non_ope_non_chemo_cnt num label='治癒未切除・non-chemo 度数',
+		non_ope_non_chemo_per num label='治癒未切除・non-chemo パーセント',
+		non_ope_chemo_cnt num label='治癒未切除・chemo 度数',
+		non_ope_chemo_per num label='治癒未切除・chemo パーセント');
+quit;
+
 proc freq data=ptdata noprint;
  	tables dsdecod*analysis_set/ missing out=cancel;
 run;
 *中止理由;
-*DSTERM;
-%INSERT_SQL(ptdata, ds_N, '中止理由', '', dsterm, 0, dsterm, .);
+%INSERT_SQL(ptdata, ds_N, '中止理由', '', dsterm, 0, %str(dsterm^=.));

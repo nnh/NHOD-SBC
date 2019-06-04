@@ -22,11 +22,11 @@ options fmtsearch=(libads);
 %let non_ope_chemo='¡–ü–¢ØœEChemotherapyŒQ';
 %let non_ope_non_chemo='¡–ü–¢ØœEnon-ChemotherapyŒQ';
 
-%macro INSERT_SQL(input_ds, output_ds, item, cat, cnt, per, cond_var, cond_str);
+%macro INSERT_SQL(input_ds, output_ds, item, cat, cnt, per, cond_str);
 	%local sql_str;
 	%let sql_str=%str(select &item., &cat., &cnt., &per. from &input_ds.);
-	%if &cond_var.^=. %then %do;
-		%let sql_str=&sql_str.%str( where &cond_var. = &cond_str.);
+	%if &cond_str.^=. %then %do;
+		%let sql_str=&sql_str.%str( where &cond_str.);
 	%end;
 	proc sql;
 		insert into &output_ds.
