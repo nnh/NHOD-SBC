@@ -103,13 +103,13 @@ data analysis;
 			analysis_group(rename=(analysis_group=analysis));
 run;
 
-%INSERT_SQL(efficacy, ds_N, '', '有効性解析対象集団', count, percent, %str(efficacy=1));
-%INSERT_SQL(analysis, ds_N, '', &ope_group., count, percent, %str(analysis=)&ope_group.);
-%INSERT_SQL(analysis, ds_N, '', &ope_chemo., count, percent, %str(analysis=)&ope_chemo.);
-%INSERT_SQL(analysis, ds_N, '', &ope_non_chemo., count, percent, %str(analysis=)&ope_non_chemo.);
-%INSERT_SQL(analysis, ds_N, '', &non_ope_group., count, percent, %str(analysis=)&non_ope_group.);
-%INSERT_SQL(analysis, ds_N, '', &non_ope_chemo., count, percent, %str(analysis=)&non_ope_chemo.);
-%INSERT_SQL(analysis, ds_N, '', &non_ope_non_chemo., count, percent, %str(analysis=)&non_ope_non_chemo.);
+%INSERT_SQL(efficacy, ds_N, %str('', '有効性解析対象集団', count, percent), %str(efficacy=1));
+%INSERT_SQL(analysis, ds_N, %str('', &ope_group., count, percent), %str(analysis=)&ope_group.);
+%INSERT_SQL(analysis, ds_N, %str('', &ope_chemo., count, percent), %str(analysis=)&ope_chemo.);
+%INSERT_SQL(analysis, ds_N, %str('', &ope_non_chemo., count, percent), %str(analysis=)&ope_non_chemo.);
+%INSERT_SQL(analysis, ds_N, %str('', &non_ope_group., count, percent), %str(analysis=)&non_ope_group.);
+%INSERT_SQL(analysis, ds_N, %str('', &non_ope_chemo., count, percent), %str(analysis=)&non_ope_chemo.);
+%INSERT_SQL(analysis, ds_N, %str('', &non_ope_non_chemo., count, percent), %str(analysis=)&non_ope_non_chemo.);
 
 %ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
 

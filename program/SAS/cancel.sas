@@ -50,8 +50,30 @@ proc sql;
 		non_ope_chemo_per num label='治癒未切除・chemo パーセント');
 quit;
 
+proc sql;
+	create table ds_reasons_for_withdrawal(
+		reasons num label='中止理由');
+quit;
+
 proc freq data=ptdata noprint;
  	tables dsdecod*analysis_set/ missing out=cancel;
 run;
-*中止理由;
-%INSERT_SQL(ptdata, ds_N, '中止理由', '', dsterm, 0, %str(dsterm^=.));
+
+%macro TEST;
+	proc sql noprint;
+		select count(*) from cancel where dsdecod=1;
+	quit;
+	%if &sqlobs.=1 %then %do;
+		
+	%end;
+	%else %do;
+		%return;
+	%end;
+	proc sql;
+		insert into ds_cancel
+		values(111,2,3,4,5,6,7,8); 
+	quit;
+%mend TEST;
+%test;
+
+%INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
