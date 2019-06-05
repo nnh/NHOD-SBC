@@ -82,18 +82,11 @@ run;
 			select percent into:per2 from temp_ds where analysis_set=&ope_chemo.;
 			select percent into:per3 from temp_ds where analysis_set=&non_ope_non_chemo.;
 			select percent into:per4 from temp_ds where analysis_set=&non_ope_chemo.;
+			insert into &output_ds.
+			values("&str_item.", &cnt1., &per1., &cnt2., &per2. ,&cnt3., &per3. ,&cnt4., &per4.); 
 		quit;
 	%end;
-	%else %do;
-		%return;
-	%end;
-	proc sql;
-		insert into &output_ds.
-		values("&str_item.", &cnt1., &per1., &cnt2., &per2. ,&cnt3., &per3. ,&cnt4., &per4.); 
-	quit;
 %mend INSERT_CANCEL;
 %INSERT_CANCEL(cancel, ds_cancel);
 
-proc contents data=ds_cancel out=VARS1 varnum noprint;
-run;
 %INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
