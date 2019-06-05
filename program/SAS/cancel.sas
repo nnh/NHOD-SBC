@@ -40,6 +40,7 @@ SAS version : 9.4
 *症例の内訳と中止例集計;
 proc sql;
 	create table ds_cancel (
+		items char(6) label='',
 		ope_non_chemo_cnt num label='治癒切除・non-chemo 度数',
 		ope_non_chemo_per num label='治癒切除・non-chemo パーセント',
 		ope_chemo_cnt num label='治癒切除・chemo 度数',
@@ -59,21 +60,40 @@ proc freq data=ptdata noprint;
  	tables dsdecod*analysis_set/ missing out=cancel;
 run;
 
-%macro TEST;
+%macro INSERT_CANCEL(input_ds, output_ds);
+	%local str_item cnt1 cnt2 cnt3 cnt4 per1 per2 per3 per4;
 	proc sql noprint;
-		select count(*) from cancel where dsdecod=1;
+		select count(*) from &input_ds. where dsdecod=1;
 	quit;
 	%if &sqlobs.=1 %then %do;
-		
+		data temp_ds;
+			set &input_ds.;
+			format str_dsdecod $6.;
+			where dsdecod=1;
+			str_dsdecod=cat(put(dsdecod, FMT_9_F.), '例');
+		run;	
+		proc sql noprint;
+			select distinct str_dsdecod into:str_item from temp_ds;
+			select count into:cnt1 from temp_ds where analysis_set=&ope_non_chemo.;
+			select count into:cnt2 from temp_ds where analysis_set=&ope_chemo.;
+			select count into:cnt3 from temp_ds where analysis_set=&non_ope_non_chemo.;
+			select count into:cnt4 from temp_ds where analysis_set=&non_ope_chemo.;
+			select percent into:per1 from temp_ds where analysis_set=&ope_non_chemo.;
+			select percent into:per2 from temp_ds where analysis_set=&ope_chemo.;
+			select percent into:per3 from temp_ds where analysis_set=&non_ope_non_chemo.;
+			select percent into:per4 from temp_ds where analysis_set=&non_ope_chemo.;
+		quit;
 	%end;
 	%else %do;
 		%return;
 	%end;
 	proc sql;
-		insert into ds_cancel
-		values(111,2,3,4,5,6,7,8); 
+		insert into &output_ds.
+		values("&str_item.", &cnt1., &per1., &cnt2., &per2. ,&cnt3., &per3. ,&cnt4., &per4.); 
 	quit;
-%mend TEST;
-%test;
+%mend INSERT_CANCEL;
+%INSERT_CANCEL(cancel, ds_cancel);
 
+proc contents data=ds_cancel out=VARS1 varnum noprint;
+run;
 %INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
