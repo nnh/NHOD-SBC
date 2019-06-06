@@ -49,11 +49,6 @@ options fmtsearch=(libads);
 			non_ope_non_chemo_cnt num label="%sysfunc(compress(&non_ope_non_chemo., %str(%')))",
 			non_ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_non_chemo. , &cst_per.)), %str(%')))",
 			non_ope_chemo_cnt num label="%sysfunc(compress(&non_ope_chemo., %str(%')))",
-			non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))"
-/*			non_ope_non_chemo_cnt num label='治癒未切除・non-chemo 度数',
-			non_ope_non_chemo_per num label='治癒未切除・non-chemo パーセント',
-			non_ope_chemo_cnt num label='治癒未切除・chemo 度数',
-			non_ope_chemo_per num label='治癒未切除・chemo パーセント'*/);
+			non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
 	quit;	
 %mend CREATE_OUTPUT_DS;
-%CREATE_OUTPUT_DS(aaa, 10, '症例の内訳と中止例集計');

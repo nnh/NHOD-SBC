@@ -38,18 +38,11 @@ SAS version : 9.4
 %inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
 *症例の内訳と中止例集計;
-proc sql;
-	create table ds_cancel (
-		items char(6) label='',
-		ope_non_chemo_cnt num label='治癒切除・non-chemo 度数',
-		ope_non_chemo_per num label='治癒切除・non-chemo パーセント',
-		ope_chemo_cnt num label='治癒切除・chemo 度数',
-		ope_chemo_per num label='治癒切除・chemo パーセント',
-		non_ope_non_chemo_cnt num label='治癒未切除・non-chemo 度数',
-		non_ope_non_chemo_per num label='治癒未切除・non-chemo パーセント',
-		non_ope_chemo_cnt num label='治癒未切除・chemo 度数',
-		non_ope_chemo_per num label='治癒未切除・chemo パーセント');
-quit;
+%CREATE_OUTPUT_DS(cancel, 10, '症例の内訳と中止例集計');
+data ds_cancel;
+	set cancel;
+	drop all_cnt all_per;
+run;
 
 proc sql;
 	create table ds_reasons_for_withdrawal(
@@ -60,16 +53,17 @@ proc freq data=ptdata noprint;
  	tables dsdecod*analysis_set/ missing out=cancel;
 run;
 
-%macro INSERT_CANCEL(input_ds, output_ds);
+%macro INSERT_CANCEL(input_ds, output_ds, cond);
 	%local str_item cnt1 cnt2 cnt3 cnt4 per1 per2 per3 per4;
 	proc sql noprint;
-		select count(*) from &input_ds. where dsdecod=1;
+		select * from &input_ds. where dsdecod=&cond.;
 	quit;
+	%put &sqlobs.; 
 	%if &sqlobs.=1 %then %do;
 		data temp_ds;
 			set &input_ds.;
 			format str_dsdecod $6.;
-			where dsdecod=1;
+			where dsdecod=&cond.;
 			str_dsdecod=cat(put(dsdecod, FMT_9_F.), '例');
 		run;	
 		proc sql noprint;
@@ -87,6 +81,10 @@ run;
 		quit;
 	%end;
 %mend INSERT_CANCEL;
-%INSERT_CANCEL(cancel, ds_cancel);
 
+%INSERT_CANCEL(cancel, ds_cancel, 1);
+%INSERT_CANCEL(cancel, ds_cancel, 2);
 %INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
+
+*Delete the working dataset;
+proc datasets lib=work; delete cancel temp_ds; run; quit;
