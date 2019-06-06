@@ -1,8 +1,8 @@
 **************************************************************************
-Program Name : cancel.sas
+Program Name : demog.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-06-04
+Date : 2019-06-05
 SAS version : 9.4
 **************************************************************************;
 *Define constants;
@@ -37,24 +37,56 @@ SAS version : 9.4
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
 %inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
-*症例の内訳と中止例集計;
-%CREATE_OUTPUT_DS(cancel, 10, '症例の内訳と中止例集計');
-data ds_cancel;
-	set cancel;
-	drop all_cnt all_per;
+proc means data=ptdata noprint;
+	class analysis_set;
+    var age;
+    output out=age n=n mean=mean std=std median=median q1=q1 q3=q3 min=min max=max;
 run;
-
-proc sql;
-	create table ds_reasons_for_withdrawal(
-		reasons num label='中止理由');
-quit;
 
 proc freq data=ptdata noprint;
- 	tables dsdecod*analysis_set/ missing out=cancel;
+ 	tables analysis_set*crohnyn/ missing out=crohnyn;
 run;
 
-%macro INSERT_CANCEL(input_ds, output_ds, cond);
-	%local str_item cnt1 cnt2 cnt3 cnt4 per1 per2 per3 per4;
+%CREATE_OUTPUT_DS(ds_demog, 30, '背景と人口統計学的特性');
+
+%macro MEANS_FUNC(input_ds, cat_var, var_var, output_ds);
+	proc means data=&input_ds. noprint;
+		class &cat_var.;
+		var &var_var.;
+		output out=temp_ds n=n mean=temp_mean std=temp_std median=median q1=q1 q3=q3 min=min max=max;
+	run;
+	data temp_ds;
+		set temp_ds;
+		mean=round(temp_mean, 0.1);
+		std=round(temp_std, 0.1);
+	run;
+	data temp_means1;
+		set temp_ds;
+		if analysis_set=&ope_non_chemo. then output;
+	run;
+	data temp_means2;
+		set temp_ds;
+		if analysis_set=&ope_chemo. then output;
+	run;
+	data temp_means3;
+		set temp_ds;
+		if analysis_set=&non_ope_non_chemo. then output;
+	run;
+	data temp_means4;
+		set temp_ds;
+		if analysis_set=&non_ope_chemo. then output;
+	run;
+	data aaa;
+		set temp_means1 - temp_means4;
+	run;
+/*	proc transpose data=temp_ds out=aaa;
+		 var &cat_var. n mean std median q1 q3 min max;
+	run;*/
+%mend;
+%means_func(ptdata, analysis_set, age, age);
+
+%macro INSERT_DEMOG(input_ds, output_ds, cond);
+	%local str_item cnt_all cnt1 cnt2 cnt3 cnt4 per_all per1 per2 per3 per4;
 	proc sql noprint;
 		select * from &input_ds. where dsdecod=&cond.;
 	quit;
@@ -81,10 +113,3 @@ run;
 		quit;
 	%end;
 %mend INSERT_CANCEL;
-
-%INSERT_CANCEL(cancel, ds_cancel, 1);
-%INSERT_CANCEL(cancel, ds_cancel, 2);
-%INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
-
-*Delete the working dataset;
-proc datasets lib=work nolist; delete cancel temp_ds; run; quit;
