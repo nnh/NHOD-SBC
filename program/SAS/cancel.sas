@@ -37,11 +37,10 @@ SAS version : 9.4
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
 %inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
-*症例の内訳と中止例集計;
-%CREATE_OUTPUT_DS(cancel, 10, '症例の内訳と中止例集計');
+%CREATE_OUTPUT_DS(output_ds=cancel, items_label='症例の内訳と中止例集計');
 data ds_cancel;
 	set cancel;
-	drop all_cnt all_per;
+	drop all_cnt all_per title;
 run;
 
 proc sql;

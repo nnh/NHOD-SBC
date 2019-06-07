@@ -35,7 +35,7 @@ options fmtsearch=(libads);
 	quit;
 %mend INSERT_SQL;
 
-%macro CREATE_OUTPUT_DS(output_ds, title_char_len, items_char_len, items_label);
+%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='');
 	%local cst_per;
 	%let cst_per='(%)';
 	proc sql;
