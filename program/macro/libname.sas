@@ -15,6 +15,7 @@ options fmtsearch=(libads);
 %let outpath=&projectpath.\output;
 %let ads=&projectpath.\ptosh-format\ads;
 *Define constants;
+%let all_group='全体';
 %let ope_group='治癒切除の解析対象集団';
 %let ope_chemo='治癒切除・Chemotherapy群';
 %let ope_non_chemo='治癒切除・non-Chemotherapy群';
@@ -34,14 +35,15 @@ options fmtsearch=(libads);
 	quit;
 %mend INSERT_SQL;
 
-%macro CREATE_OUTPUT_DS(output_ds, items_char_len, items_label);
+%macro CREATE_OUTPUT_DS(output_ds, title_char_len, items_char_len, items_label);
 	%local cst_per;
 	%let cst_per='(%)';
 	proc sql;
 		create table &output_ds. (
-			items char(&items_char_len.) label="%substr(&items_label., 2, %length(&ope_group.)-2)",
-			all_cnt num label='全体',
-			all_per num label="%sysfunc(compress(%sysfunc(cat('全体' , &cst_per.)), %str(%')))",
+			title char(&title_char_len.) label="%substr(&items_label., 2, %length(&ope_group.)-2)", 
+			items char(&items_char_len.) label='項目名',
+			all_cnt num label=&all_group.,
+			all_per num label="%sysfunc(compress(%sysfunc(cat(&all_group. , &cst_per.)), %str(%')))",
 			ope_non_chemo_cnt num label="%sysfunc(compress(&ope_non_chemo., %str(%')))",
 			ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&ope_non_chemo. , &cst_per.)), %str(%')))",
 			ope_chemo_cnt num label="%sysfunc(compress(&ope_chemo., %str(%')))",
