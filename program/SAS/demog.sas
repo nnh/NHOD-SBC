@@ -89,6 +89,23 @@ SAS version : 9.4
 
 %mend MEANS_FUNC;
 
+%macro SET_COLNAMES(input_ds);	
+	%global temp_name_cnt temp_name_per;
+	data _NULL_;
+		set &input_ds.;
+		if _N_=1 then do;
+			call symput('temp_analysis_set', analysis_set);
+		end;
+	run;
+	data _NULL_;
+		set ds_colnames;
+		if LABEL="&temp_analysis_set." then do;
+			call symput('temp_name_cnt', NAME);
+		end;
+	run;
+	%let temp_name_per=%substr(&temp_name_cnt, 1, %sysfunc(length(&temp_name_cnt.))-3)per;
+%mend SET_COLNAMES;
+
 %macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
 	proc freq data=&input_ds. noprint;
 		tables &var_var./missing out=temp_all_ds;
@@ -124,14 +141,14 @@ SAS version : 9.4
     run;
 
 	%do i = 1 %to 5;
+		%SET_COLNAMES(temp&i.);
 		data temp&i.;
 			set temp&i.;
 			drop analysis_set;
-			rename count=count&i. percent=percent&i. items=temp_items;
+			rename count=&temp_name_cnt. percent=&temp_name_per. items=temp_items;
 		run;
 		proc sort data=temp&i. out=temp&i.; by temp_items; run; 
 	%end;	
-
 
 	data temp_output;
 		format title items $100.;
@@ -150,7 +167,6 @@ SAS version : 9.4
 	proc datasets lib=work nolist; delete temp1-temp5 temp_ds temp_all_ds temp_output; run; quit;
 
 %mend FREQ_FUNC;
-
 **************************************************************************;
 %let thisfile=%GET_THISFILE_FULLPATH;
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
@@ -160,7 +176,7 @@ SAS version : 9.4
 proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 
 %MEANS_FUNC(title='年齢', var_var=age);
-*%FREQ_FUNC(title='クローン病', var_var=crohnyn);
+%FREQ_FUNC(title='クローン病', var_var=crohnyn);
 
 %ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\aaa.csv, labels=Y);
 /*%macro aaa(input_ds);
