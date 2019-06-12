@@ -87,7 +87,8 @@ SAS version : 9.4
 	/* Delete the working dataset */
 	proc datasets lib=work nolist; delete temp_all_ds temp_ds temp_means tran_means; run; quit;
 
-%mend;
+%mend MEANS_FUNC;
+
 %macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
 	proc freq data=&input_ds. noprint;
 		tables &var_var./missing out=temp_all_ds;
@@ -96,54 +97,80 @@ SAS version : 9.4
 	proc freq data=&input_ds. noprint;
 		tables &cat_var.*&var_var./missing out=temp_ds;
 	run;
+
 	data temp_ds;
 		set temp_all_ds temp_ds;
 		temp_per=round(percent, 0.1);
-		drop percent;
-		rename temp_per=percent;
-	run;
-	
-	proc sql noprint;
-		create table ds_all_group as select &var_var., count, percent from temp_ds where &cat_var.=&all_group;
-		create table ds_ope_non_chemo as select &var_var., count, percent from temp_ds where &cat_var.=&ope_non_chemo;
-		create table ds_ope_chemo as select &var_var., count, percent from temp_ds where &cat_var.=&ope_chemo;
-		create table ds_non_ope_non_chemo as select &var_var., count, percent from temp_ds where &cat_var.=&non_ope_non_chemo;
-		create table ds_non_ope_chemo as select &var_var., count, percent from temp_ds where &cat_var.=&non_ope_chemo;
-		create table temp_output as 
-			select 	'' as title, a.&var_var. as items, a.count as all_cnt, a.percent as all_per, 
-						b.count as ope_non_chemo_cnt, b.percent as ope_non_chemo_per, 
-						c.count as ope_chemo_cnt, c.percent as ope_chemo_per,
-						d.count as non_ope_non_chemo_cnt, d.percent as non_ope_non_chemo_per, 
-						e.count as non_ope_chemo_cnt, e.percent as non_ope_chemo_per 
-			from ds_all_group as a 
-				left join ds_ope_non_chemo as b on a.&var_var. = b.&var_var.
-				left join ds_ope_chemo as c on a.&var_var. = c.&var_var.
-				left join ds_non_ope_non_chemo as d on a.&var_var. = d.&var_var.
-				left join ds_non_ope_chemo as e on a.&var_var. = e.&var_var.;
-	quit;
-	data temp_output;
-		set temp_output;
-		if _N_=1 then do; title=&title.; end;
-		%let dsid=%sysfunc(open(temp_output, i));
+		/* Convert format to string */
+		%let dsid=%sysfunc(open(temp_ds, i));
 		%if &dsid %then %do;
-      		%let fmt=%sysfunc(varfmt(&dsid, %sysfunc(varnum(&dsid, items))));
+      		%let fmt=%sysfunc(varfmt(&dsid, %sysfunc(varnum(&dsid, &var_var.))));
       		%let rc=%sysfunc(close(&dsid));
    		%end;
 		%put &fmt.;
-		temp_items=put(items, &fmt.);
-		drop items;
-		rename temp_items=items;
+		items=put(&var_var., &fmt.);
+		drop percent &var_var.;
+		rename temp_per=percent;
 	run;
+
+	/* Split the dataset */
+	data temp1 temp2 temp3 temp4 temp5;
+		set temp_ds;
+        if analysis_set=&all_group. then output temp1;
+        else if analysis_set=&ope_non_chemo. then output temp2;
+        else if analysis_set=&ope_chemo. then output temp3;
+        else if analysis_set=&non_ope_non_chemo. then output temp4;
+        else if analysis_set=&non_ope_chemo. then output temp5;
+    run;
+
+	%do i = 1 %to 5;
+		data temp&i.;
+			set temp&i.;
+			drop analysis_set;
+			rename count=count&i. percent=percent&i. items=temp_items;
+		run;
+		proc sort data=temp&i. out=temp&i.; by temp_items; run; 
+	%end;	
+
+
+	data temp_output;
+		format title items $100.;
+		merge temp1 temp2 temp3 temp4 temp5;
+		by temp_items;
+		if _N_=1 then do; title=&title.; end;
+		items=temp_items;
+		drop temp_items;
+	run;
+
 	data &output_ds.;
 		set &output_ds. temp_output;
 	run;
+
+	/* Delete the working dataset */
+	proc datasets lib=work nolist; delete temp1-temp5 temp_ds temp_all_ds temp_output; run; quit;
+
 %mend FREQ_FUNC;
+
 **************************************************************************;
 %let thisfile=%GET_THISFILE_FULLPATH;
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
 %inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
-%MEANS_FUNC(title='年齢', var_var=age);
-%FREQ_FUNC(title='クローン病', var_var=crohnyn);
+proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 
+%MEANS_FUNC(title='年齢', var_var=age);
+*%FREQ_FUNC(title='クローン病', var_var=crohnyn);
+
+%ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\aaa.csv, labels=Y);
+/*%macro aaa(input_ds);
+	proc contents data=&input_ds. out=ds_colnames varnum noprint; run;
+	%let ccc='';
+	data bbb;
+		set ds_colnames;
+		call symputx( cats("A",_N_) , NAME);
+	run;
+	%put &A1.;
+	%put &A2.;
+%mend aaa;
+%aaa(ds_demog);*/
