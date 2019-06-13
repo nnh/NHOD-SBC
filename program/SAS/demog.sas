@@ -89,65 +89,6 @@ SAS version : 9.4
 
 %mend MEANS_FUNC;
 
-%macro SET_COLNAMES(input_ds);  
-    %global temp_name_cnt temp_name_per;
-    data _NULL_;
-        set &input_ds.;
-        if _N_=1 then do;
-            call symput('temp_analysis_set', analysis_set);
-        end;
-    run;
-    data _NULL_;
-        set ds_colnames;
-        if LABEL="&temp_analysis_set." then do;
-            call symput('temp_name_cnt', NAME);
-        end;
-    run;
-    %let temp_name_per=%substr(&temp_name_cnt, 1, %sysfunc(length(&temp_name_cnt.))-3)per;
-%mend SET_COLNAMES;
-
-%macro GET_LENGTH(input_ds, var);
-    %global var_len;
-    data _NULL_;
-        set &input_ds.;
-        if NAME=&var. then do;
-            call symput('var_len', LENGTH);
-        end;
-    run;
-%mend GET_LENGTH; 
-
-%macro GET_TYPE(input_ds, var);
-    %global var_type;
-    %local temp_type;
-    data _NULL_;
-        set &input_ds.;
-        if NAME=&var. then do;
-            call symput('temp_type', TYPE);
-        end;
-        if temp_type=1 then do;
-            call symput('var_type', 'best12.');
-        end;
-        else do;
-            call symput('var_type', '$');
-        end;
-    run;
-%mend GET_TYPE; 
-
-%macro GET_FORMAT(input_ds, var);
-    %global str_format;
-    %GET_TYPE(&input_ds., &var.);
-    %let str_format=&var_type.;
-    %if &str_format.=$ %then %do;
-        %GET_LENGTH(&input_ds., &var.);
-        %let str_format=%sysfunc(cat(&str_format., &var_len.));
-    %end;
-     /*    if &str_format.='$' then do;
-            %GET_LENGTH(&input_ds., &var.);
-            %let str_format=%sysfunc(cat(&str_format., &var_len.));
-        end;*/
-
-%mend GET_FORMAT;
-
 %macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
     proc freq data=&input_ds. noprint;
         tables &var_var./missing out=temp_all_ds;
@@ -156,19 +97,30 @@ SAS version : 9.4
     proc freq data=&input_ds. noprint;
         tables &cat_var.*&var_var./missing out=temp_ds;
     run;
+    %local temp_var_format format_f temp_len;
+    %let temp_var_format='';
+    %let format_f=.;
+    %GET_VAR_FORMAT(ptdata_contents, "&var_var.", temp_var_format);
+    %let temp_len = %sysfunc(length(&temp_var_format.));
 
     data temp_ds;
         set temp_all_ds temp_ds;
         temp_per=round(percent, 0.1);
-        /* Convert format to string */
-        %let dsid=%sysfunc(open(temp_ds, i));
-        %if &dsid %then %do;
-            %let fmt=%sysfunc(varfmt(&dsid, %sysfunc(varnum(&dsid, &var_var.))));
-            %let rc=%sysfunc(close(&dsid));
-        %end;
-        %put &fmt.;
-        items=put(&var_var., &fmt.);
-        drop percent &var_var.;
+        if &format_f.=1 then do;
+            /* Convert format to string */
+            %let dsid=%sysfunc(open(temp_ds, i));
+            %if &dsid %then %do;
+                %let fmt=%sysfunc(varfmt(&dsid, %sysfunc(varnum(&dsid, &var_var.))));
+                %let rc=%sysfunc(close(&dsid));
+            %end;
+            %put &fmt.;
+            items=put(&var_var., &fmt.);
+        end;
+        else do;
+            retain items;
+            items=&var_var.;
+        end;
+        drop percent &var_var. FMT;
         rename temp_per=percent;
     run;
 
@@ -207,7 +159,7 @@ SAS version : 9.4
     run;
 
     /* Delete the working dataset */
-    proc datasets lib=work nolist; delete temp1-temp5 temp_ds temp_all_ds temp_output; run; quit;
+    /*proc datasets lib=work nolist; delete temp1-temp5 temp_ds temp_all_ds temp_output; run; quit;*/
 
 %mend FREQ_FUNC;
 **************************************************************************;
@@ -218,7 +170,21 @@ SAS version : 9.4
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
 proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 
-%MEANS_FUNC(title='年齢', var_var=age);
-%FREQ_FUNC(title='クローン病', var_var=crohnyn);
+%MEANS_FUNC(title='年齢', var_var=AGE);
+%FREQ_FUNC(title='クローン病', var_var=CrohnYN);
+%FREQ_FUNC(title='HNPCC', var_var=HNPCCYN);
+%FREQ_FUNC(title='TNM分類', var_var=TNMCAT);
+%FREQ_FUNC(title='PS', var_var=PS);
+%FREQ_FUNC(title='部位', var_var=SBCSITE);
+%FREQ_FUNC(title='病理組織の分化度', var_var=SBCdegree);
+%FREQ_FUNC(title='RAS変異の有無', var_var=RASYN);
+%FREQ_FUNC(title='転移臓器の有無', var_var=metaYN);
+data ds_meta;
+    set ptdata;
+    where metaYN=2;
+    keep metaYN
+run;
+
+%FREQ_FUNC(input_ds=ds_meta, title='肝臓', var_var=metasite_1);
 
 %ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\aaa.csv, labels=Y);

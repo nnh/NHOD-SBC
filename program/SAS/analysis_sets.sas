@@ -23,14 +23,14 @@ SAS version : 9.4
 %mend GET_THISFILE_FULLPATH;
 
 %macro GET_DIRECTORY_PATH(input_path, directory_level);
-	%let input_path_len=%length(&input_path.);
-	%let temp_path=&input_path.;
-	%do i = 1 %to &directory_level.;
-		%let temp_len=%scan(&temp_path., -1, '\');
-		%let temp_path=%substr(&temp_path., 1, %length(&temp_path.)-%length(&temp_len.)-1);
-		%put &temp_path.;
-	%end;
-	%let _path=&temp_path.;
+    %let input_path_len=%length(&input_path.);
+    %let temp_path=&input_path.;
+    %do i = 1 %to &directory_level.;
+        %let temp_len=%scan(&temp_path., -1, '\');
+        %let temp_path=%substr(&temp_path., 1, %length(&temp_path.)-%length(&temp_len.)-1);
+        %put &temp_path.;
+    %end;
+    %let _path=&temp_path.;
     &_path.
 %mend GET_DIRECTORY_PATH;
 
@@ -47,60 +47,62 @@ run;
 data saihi;
     set saihi;
     subjid=input(VAR1, best12.);
-	rename VAR2=analysis_set VAR3=efficacy VAR4=safety;
-	format analysis_group  $24.;
-	if substr(VAR2, 1, 8)='¡–üØœ' then do;
-		analysis_group=&ope_group.;
-	end;
-	else if substr(VAR2, 1, 10)='¡–ü–¢Øœ' then do;
-		analysis_group=&non_ope_group.;
-	end;
+    rename VAR2=analysis_set VAR3=efficacy VAR4=safety;
+    format analysis_group  $24.;
+    if substr(VAR2, 1, 8)='¡–üØœ' then do;
+        analysis_group=&ope_group.;
+    end;
+    else if substr(VAR2, 1, 10)='¡–ü–¢Øœ' then do;
+        analysis_group=&non_ope_group.;
+    end;
     drop VAR1;
 run;
 
 proc sort data=saihi; by subjid; run;
 
 data ptdata;
-	set libads.ptdata;
-	temp_subjid=input(subjid, best12.);
-	drop subjid;
-	rename temp_subjid=subjid;
+    set libads.ptdata;
+    temp_subjid=input(subjid, best12.);
+    drop subjid;
+    rename temp_subjid=subjid;
 run;
 
 data ptdata;
     merge ptdata saihi;
-	by subjid;
+    by subjid;
 run;
 
+proc contents data=ptdata out=ptdata_contents varnum noprint; run;
+
 proc sql;
-	create table ds_N (
-		Item char(200) ,
-		Category char(200),
-		count num,
-		percent num);
+    create table ds_N (
+        Item char(200) ,
+        Category char(200),
+        count num,
+        percent num);
 quit;
 
 proc sql noprint;
-	select count(*) into: count_n from ptdata;
-	insert into ds_N
-		values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
+    select count(*) into: count_n from ptdata;
+    insert into ds_N
+        values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
 proc freq data=ptdata noprint;
- 	tables efficacy/ missing out=efficacy;
+    tables efficacy/ missing out=efficacy;
 run;
 
 proc freq data=ptdata noprint;
- 	tables analysis_set/ missing out=analysis_set;
+    tables analysis_set/ missing out=analysis_set;
 run;
 
 proc freq data=ptdata noprint;
- 	tables analysis_group/ missing out=analysis_group;
+    tables analysis_group/ missing out=analysis_group;
 run;
 
 data analysis; 
-	set 	analysis_set(rename=(analysis_set=analysis))
-			analysis_group(rename=(analysis_group=analysis));
+    set     analysis_set(rename=(analysis_set=analysis))
+            analysis_group(rename=(analysis_group=analysis));
 run;
 
 %INSERT_SQL(efficacy, ds_N, %str('', '—LŒø«‰ğÍ‘ÎÛW’c', count, percent), %str(efficacy=1));
@@ -114,7 +116,7 @@ run;
 %ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
 
 *Delete the working dataset;
-proc datasets lib=work nolist; save ptdata ds_n; quit;
+proc datasets lib=work nolist; save ptdata ds_n ptdata_contents; quit;
 
 
 
