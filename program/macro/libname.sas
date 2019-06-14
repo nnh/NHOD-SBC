@@ -22,6 +22,7 @@ options fmtsearch=(libads);
 %let non_ope_group='¡–ü–¢Øœ‚Ì‰ğÍ‘ÎÛW’c';
 %let non_ope_chemo='¡–ü–¢ØœEChemotherapyŒQ';
 %let non_ope_non_chemo='¡–ü–¢ØœEnon-ChemotherapyŒQ';
+%let demog_group_count=5;
 
 %macro INSERT_SQL(input_ds, output_ds, var_list, cond_str);
     %local sql_str;

@@ -97,7 +97,7 @@ SAS version : 9.4
     proc freq data=&input_ds. noprint;
         tables &cat_var.*&var_var./missing out=temp_ds;
     run;
-    %local temp_var_format format_f temp_len;
+    %local temp_var_format format_f temp_len i;
     %let temp_var_format='';
     %let format_f=.;
     %GET_VAR_FORMAT(ptdata_contents, "&var_var.", temp_var_format);
@@ -137,7 +137,7 @@ SAS version : 9.4
         else if analysis_set=&non_ope_chemo. then output temp5;
     run;
 
-    %do i = 1 %to 5;
+    %do i = 1 %to %eval(&demog_group_count.);
         %SET_COLNAMES(temp&i.);
         data temp&i.;
             set temp&i.;
@@ -150,7 +150,7 @@ SAS version : 9.4
     %GET_FORMAT(ds_colnames, 'items');
     data temp_output;
         format title items &str_format..;
-        merge temp1 temp2 temp3 temp4 temp5;
+        merge temp1-temp&demog_group_count.;
         by temp_items;
         if _N_=1 then do; title=&title.; end;
         items=temp_items;
@@ -162,7 +162,7 @@ SAS version : 9.4
     run;
 
     /* Delete the working dataset */
-    /*proc datasets lib=work nolist; delete temp1-temp5 temp_ds temp_all_ds temp_output; run; quit;*/
+    proc datasets lib=work nolist; delete temp1-temp&demog_group_count. temp_ds temp_all_ds temp_output; run; quit;
 
 %mend FREQ_FUNC;
 **************************************************************************;
@@ -172,7 +172,6 @@ SAS version : 9.4
 **************************************************************************;
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
 proc contents data=ds_demog out=ds_colnames varnum noprint; run;
-
 %MEANS_FUNC(title='年齢', var_var=AGE);
 %FREQ_FUNC(title='クローン病', var_var=CrohnYN);
 %FREQ_FUNC(title='HNPCC', var_var=HNPCCYN);
@@ -181,12 +180,33 @@ proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 %FREQ_FUNC(title='部位', var_var=SBCSITE);
 %FREQ_FUNC(title='病理組織の分化度', var_var=SBCdegree);
 %FREQ_FUNC(title='RAS変異の有無', var_var=RASYN);
-%FREQ_FUNC(title='転移臓器の有無', var_var=metaYN);
+proc sql;
+    create table temp_metaYN like ds_demog;
+quit;
+%FREQ_FUNC(title='転移臓器の有無', var_var=metaYN, output_ds=temp_metaYN);
 data ds_meta;
     set ptdata;
     where metaYN=2;
 run;
+%macro FREQ_METASITE;
+    %local i temp_meta_1 temp_meta_2 temp_meta_3 temp_meta_4 temp_meta_5;
+    %let temp_meta_1='　肝臓';
+    %let temp_meta_2='　肺';
+    %let temp_meta_3='　腹膜播種';
+    %let temp_meta_4='　腹腔内リンパ節';
+    %let temp_meta_5='　その他';
+    %do i = 1 %to %eval(&demog_group_count.);
+        proc sql;
+            create table temp_metasite_&i. like ds_demog;
+        quit;
+        data temp_input;
+            set ds_meta;
+            where metasite_&i. like '%TRUE%';
+        run; 
+        %FREQ_FUNC(input_ds=temp_input, title=&&temp_meta_&i., var_var=metasite_&i., output_ds=temp_metasite_&i.);
+    %end;
+%mend FREQ_METASITE;
+%FREQ_METASITE;
 
-%FREQ_FUNC(input_ds=ds_meta, title='肝臓', var_var=metasite_1);
 
 %ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\aaa.csv, labels=Y);
