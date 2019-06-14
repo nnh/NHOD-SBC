@@ -120,3 +120,16 @@ options fmtsearch=(libads);
         end;
     run;
 %mend GET_VAR_FORMAT; 
+
+%macro TO_NUM_TEST_RESULTS(input_ds=ptdata, var='', output_ds=ptdata);
+    data &output_ds.;
+        format &var._num best12.;
+        set &input_ds.;
+        if &var.=-1 then do;
+            &var._num=.;
+        end;
+        else do;
+            &var._num=input(&var., best12.);
+        end;
+    run;
+%mend TO_NUM_TEST_RESULTS;
