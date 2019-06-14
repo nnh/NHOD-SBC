@@ -247,5 +247,12 @@ proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 %MEANS_FUNC(title='CEA', var_var=CEA_num);
 %TO_NUM_TEST_RESULTS(var=CA199);
 %MEANS_FUNC(title='CA199', var_var=CA199_num);
-
-%ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\aaa.csv, labels=Y);
+%ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\demog.csv, labels=Y);
+*Multiple primary cancers;
+data multiple_primary_cancers;
+    format subjid best12.;
+    set ptdata(rename=(subjid=id));
+    where MHCOM ne '';
+    subjid = id;
+    keep subjid MHCOM;
+run;
