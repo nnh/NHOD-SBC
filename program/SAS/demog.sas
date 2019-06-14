@@ -102,11 +102,14 @@ SAS version : 9.4
     %let format_f=.;
     %GET_VAR_FORMAT(ptdata_contents, "&var_var.", temp_var_format);
     %let temp_len = %sysfunc(length(&temp_var_format.));
+    %if &temp_len. >=3 %then %do;
+        %let format_f=1;
+    %end;
 
     data temp_ds;
         set temp_all_ds temp_ds;
         temp_per=round(percent, 0.1);
-        if &format_f.=1 then do;
+        %if &format_f.=1 %then %do;
             /* Convert format to string */
             %let dsid=%sysfunc(open(temp_ds, i));
             %if &dsid %then %do;
@@ -115,12 +118,12 @@ SAS version : 9.4
             %end;
             %put &fmt.;
             items=put(&var_var., &fmt.);
-        end;
-        else do;
+        %end;
+        %else %do;
             retain items;
             items=&var_var.;
-        end;
-        drop percent &var_var. FMT;
+        %end;
+        drop percent &var_var.;
         rename temp_per=percent;
     run;
 
@@ -182,7 +185,6 @@ proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 data ds_meta;
     set ptdata;
     where metaYN=2;
-    keep metaYN
 run;
 
 %FREQ_FUNC(input_ds=ds_meta, title='ŠÌ‘Ÿ', var_var=metasite_1);
