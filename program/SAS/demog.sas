@@ -32,55 +32,6 @@ SAS version : 9.4
     &_path.
 %mend GET_DIRECTORY_PATH;
 
-%macro MEANS_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
-    %local select_str columns;
-    %let columns = %str(n=n mean=temp_mean std=temp_std median=median q1=q1 q3=q3 min=min max=max);
-    /* Calculation of summary statistics (overall) */
-    proc means data=&input_ds. noprint;
-        var &var_var.;
-        output out=temp_all_ds &columns.;
-    run;
-    %EDIT_DS_ALL;
-    /* Calculation of summary statistics */
-    proc means data=&input_ds. noprint;
-        class &cat_var.;
-        var &var_var.;
-        output out=temp_ds  &columns.;
-    run;
-    /* Round mean and std, remove variable labels */
-    data temp_ds;
-        set temp_all_ds temp_ds;
-        mean=round(temp_mean, 0.1);
-        std=round(temp_std, 0.1);
-        attrib _ALL_ label=" ";
-    run;
-    /* Sort observations */
-    proc sql;
-        create table temp_means like temp_ds;
-        insert into temp_means select * from temp_ds where &cat_var.=&all_group.;
-        insert into temp_means set &cat_var.='dummy';
-        insert into temp_means select * from temp_ds where &cat_var.=&ope_non_chemo. ;
-        insert into temp_means set &cat_var.='dummy'; 
-        insert into temp_means select * from temp_ds where &cat_var.=&ope_chemo. ;
-        insert into temp_means set &cat_var.='dummy';  
-        insert into temp_means select * from temp_ds where &cat_var.=&non_ope_non_chemo. ;
-        insert into temp_means set &cat_var.='dummy';  
-        insert into temp_means select * from temp_ds where &cat_var.=&non_ope_chemo. ; 
-        insert into temp_means set &cat_var.='dummy'; 
-    quit;
-    proc transpose data=temp_means out=tran_means;
-        var n mean std median q1 q3 min max;
-    run;
-    /* Set title only on the first line */
-    proc sql;
-        insert into &output_ds. select &title., * from tran_means where _NAME_='n';
-        insert into &output_ds. select '', * from tran_means where _NAME_ NE 'n';
-    quit;
-    /* Delete the working dataset */
-    proc datasets lib=work nolist; delete temp_all_ds temp_ds temp_means tran_means; run; quit;
-
-%mend MEANS_FUNC;
-
 %macro FREQ_METAYN;
     %local i;
     proc sql noprint;
