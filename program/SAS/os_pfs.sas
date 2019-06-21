@@ -32,8 +32,8 @@ SAS version : 9.4
     &_path.
 %mend GET_DIRECTORY_PATH;
 %macro OS_FUNC(input_ds, output_filename, group_var, input_years);
-    ods graphics on;
-    odf listing gpath="&outpath.";
+    ods graphics /reset=index;
+    ods listing close;
         ods rtf file="&outpath.\&output_filename..rtf";
             ods noptitle;
             ods select survivalplot HomTests;
@@ -47,7 +47,8 @@ SAS version : 9.4
                 time &input_years.*censor(1);
             run;
         ods rtf close;
-    ods graphics off / reset=all;
+    ods listing;
+    ods graphics /reset=all;
 
     proc export data=os
         outfile="&outpath.\&output_filename..csv"

@@ -13,6 +13,13 @@ libname libads "&projectpath.\ptosh-format\ads" access=readonly;
 options fmtsearch=(libads);
 * Define functions;
 libname sasfunc "&projectpath.\program\function";
+options cmplib=sasfunc.functions; 
+proc fcmp outlib=sasfunc.functions.test;
+    deletefunc getDays;
+    deletefunc getYears;
+run;
+Quit;
+options cmplib=sasfunc.functions; 
 proc fcmp outlib=sasfunc.functions.test;
     function getDays(start_date, end_date);
         temp=end_date - start_date;
@@ -23,6 +30,12 @@ proc fcmp outlib=sasfunc.functions.test;
         return(temp);
     endsub;
 run;
+/*list the source code*/
+Options cmplib=_null_; 
+proc fcmp library=sasfunc.functions;
+    listfunc getDays getYears;
+run;
+Quit;
 options cmplib = sasfunc.functions;
 * Path;
 %let extpath=&projectpath.\input\ext;
@@ -126,6 +139,15 @@ options cmplib = sasfunc.functions;
 %mend GET_FORMAT;
 
 %macro GET_VAR_FORMAT(input_ds, var, return_var);
+    /*  *** Functional argument *** 
+        input_ds : dataset to be tested
+        var : Variable to be tested
+        return_var : Variable to store the result
+        *** Example ***
+        proc contents data=ptdata out=ptdata_contents varnum noprint; run;
+        %let temp_fmt;
+        %GET_VAR_FORMAT(ptdata_contents, "chemCAT", temp_fmt);
+    */
     data _NULL_;
         set &input_ds.;
         where NAME=&var.;
@@ -156,17 +178,21 @@ options cmplib = sasfunc.functions;
     run;
 %mend EDIT_DS_ALL;
 
+%macro EXEC_FREQ(input_ds, str_tables, output_ds);
+    proc freq data=&input_ds. noprint;
+        tables &str_tables. /missing out=&output_ds.;
+    run;
+%mend EXEC_FREQ;
+
 %macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
-    proc freq data=&input_ds. noprint;
-        tables &var_var./missing out=temp_all_ds;
-    run;
-    %EDIT_DS_ALL;
-    proc freq data=&input_ds. noprint;
-        tables &cat_var.*&var_var./missing out=temp_ds;
-    run;
     %local temp_var_format format_f temp_len i;
     %let temp_var_format='';
     %let format_f=.;
+    /* Execute FREQ procedure */
+    %EXEC_FREQ(&input_ds., &var_var., temp_all_ds);
+    %EDIT_DS_ALL;
+    %EXEC_FREQ(&input_ds., %str(&cat_var.*&var_var.), temp_ds);
+    /* Get variable format */
     %GET_VAR_FORMAT(ptdata_contents, "&var_var.", temp_var_format);
     %let temp_len = %sysfunc(length(&temp_var_format.));
     %if &temp_len. >=3 %then %do;
