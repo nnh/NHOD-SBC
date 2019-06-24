@@ -52,6 +52,14 @@ options cmplib = sasfunc.functions;
 %let demog_group_count=5;
 
 %macro INSERT_SQL(input_ds, output_ds, var_list, cond_str);
+    /*  *** Functional argument *** 
+        input_ds : Table name of select statement 
+        output_ds : Output dataset
+        var_list : Column name of select statement 
+        cond_str : Extraction condition of select statement
+        *** Example ***
+        %INSERT_SQL(analysis, ds_N, %str('', &ope_group., count, percent), %str(analysis=)&ope_group.);
+    */
     %local sql_str;
     %let sql_str=%str(select &var_list. from &input_ds.);
     %if &cond_str.^=. %then %do;
@@ -64,6 +72,14 @@ options cmplib = sasfunc.functions;
 %mend INSERT_SQL;
 
 %macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='');
+    /*  *** Functional argument ***  
+        output_ds : Output dataset
+        title_char_len : Character string length of title column
+        items_char_len : Character string length of items column
+        items_label : Title column label
+        *** Example ***
+        %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
+    */
     %local cst_per;
     %let cst_per='(%)';
     proc sql;
@@ -158,7 +174,15 @@ options cmplib = sasfunc.functions;
 %mend GET_VAR_FORMAT; 
 
 %macro TO_NUM_TEST_RESULTS(input_ds=ptdata, var='', output_ds=ptdata);
+    /*  *** Functional argument *** 
+        input_ds : Input dataset
+        str_tables : Target variable
+        output_ds : Output dataset
+        *** Example ***
+        %TO_NUM_TEST_RESULTS(var=LDH);
+    */
     data &output_ds.;
+        /* Convert a string to a number. If the value is -1, it is missing. */
         format &var._num best12.;
         set &input_ds.;
         if &var.=-1 then do;
@@ -171,6 +195,14 @@ options cmplib = sasfunc.functions;
 %mend TO_NUM_TEST_RESULTS;
 
 %macro EDIT_DS_ALL(ds=temp_all_ds, cat_var=analysis_set, char_len=100, cat_str=&all_group.);
+    /*  *** Functional argument *** 
+        ds : Input / Output dataset
+        cat_var : Target variable
+        char_len : Character string length of title column 
+        cat_str : Title column string
+        *** Example ***
+        %EDIT_DS_ALL;
+    */
     data &ds.;
         set &ds.;
         format &cat_var. $&char_len..; 
@@ -179,12 +211,28 @@ options cmplib = sasfunc.functions;
 %mend EDIT_DS_ALL;
 
 %macro EXEC_FREQ(input_ds, str_tables, output_ds);
+    /*  *** Functional argument *** 
+        input_ds : Input dataset
+        str_tables : Variables for creating a table
+        output_ds : Output dataset
+        *** Example ***
+        %EXEC_FREQ(ptdata, efficacy, efficaty);
+    */
     proc freq data=&input_ds. noprint;
         tables &str_tables. /missing out=&output_ds.;
     run;
 %mend EXEC_FREQ;
 
 %macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
+    /*  *** Functional argument ***
+        input_ds : Dataset to be aggregated
+        title : Text to output in title column
+        cat_var : Categorical variable
+        var_var : Variable to analyze
+        output_ds : Output dataset 
+        *** Example ***
+        %FREQ_FUNC(title='クローン病', var_var=CrohnYN);
+    */
     %local temp_var_format format_f temp_len i;
     %let temp_var_format='';
     %let format_f=.;
@@ -260,6 +308,15 @@ options cmplib = sasfunc.functions;
 %mend FREQ_FUNC;
 
 %macro MEANS_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
+    /*  *** Functional argument ***
+        input_ds : Dataset to be aggregated
+        title : Text to output in title column
+        cat_var : Categorical variable
+        var_var : Variable to analyze
+        output_ds : Output dataset 
+        *** Example ***
+        %MEANS_FUNC(title='年齢', var_var=AGE);
+    */
     %local select_str columns;
     %let columns = %str(n=n mean=temp_mean std=temp_std median=median q1=q1 q3=q3 min=min max=max);
     /* Calculation of summary statistics (overall) */

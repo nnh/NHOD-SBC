@@ -33,6 +33,13 @@ SAS version : 9.4
 %mend GET_DIRECTORY_PATH;
 
 %macro FREQ_METAYN;
+    /*  *** Functional argument *** 
+        none
+        *** Output dataset ***
+        ds_meta_1, ds_meta_2, ds_meta_3, ds_meta_4 
+        *** Example ***
+        %FREQ_METAYN;
+    */
     %local i;
     proc sql noprint;
         %do i = 1 %to 4;     
@@ -52,6 +59,11 @@ SAS version : 9.4
 %mend FREQ_METAYN;
 
 %macro FREQ_METASITE;
+    /*  *** Functional argument *** 
+        none
+        *** Example ***
+        %FREQ_METASITE;
+    */
     %local i temp_meta_1 temp_meta_2 temp_meta_3 temp_meta_4 temp_meta_5;
     %let temp_meta_1='Å@äÃëü';
     %let temp_meta_2='Å@îx';
@@ -78,6 +90,11 @@ SAS version : 9.4
 %mend FREQ_METASITE;
 
 %macro FREQ_META;
+    /*  *** Functional argument *** 
+        none
+        *** Example ***
+        %FREQ_META;
+    */
     %FREQ_METAYN;
     data ds_demog;
         set ds_demog ds_meta_2;
@@ -114,7 +131,7 @@ proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 %TO_NUM_TEST_RESULTS(var=CA199);
 %MEANS_FUNC(title='CA199', var_var=CA199_num);
 %ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\demog.csv, labels=Y);
-*Multiple primary cancers;
+* Multiple primary cancers;
 data ds_multiple_primary_cancers;
     format subjid best12.;
     set ptdata(rename=(subjid=id));

@@ -40,8 +40,8 @@ SAS version : 9.4
 %inc "&projectpath.\program\macro\libname.sas";
 **************************************************************************;
 proc import datafile="&extpath.\&input_csv."
-                    out=saihi
-                    dbms=csv replace;
+              out=saihi
+              dbms=csv replace;
 run;
 
 data saihi;
@@ -74,35 +74,19 @@ run;
 
 proc contents data=ptdata out=ptdata_contents varnum noprint; run;
 
-proc sql;
-    create table ds_N (
-        Item char(200) ,
-        Category char(200),
-        count num,
-        percent num);
-quit;
-
 proc sql noprint;
+    create table ds_N (Item char(200), Category char(200), count num, percent num);
     select count(*) into: count_n from ptdata;
-    insert into ds_N
-        values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
+    insert into ds_N values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
-proc freq data=ptdata noprint;
-    tables efficacy/ missing out=efficacy;
-run;
-
-proc freq data=ptdata noprint;
-    tables analysis_set/ missing out=analysis_set;
-run;
-
-proc freq data=ptdata noprint;
-    tables analysis_group/ missing out=analysis_group;
-run;
+%EXEC_FREQ(ptdata, efficacy, efficaty);
+%EXEC_FREQ(ptdata, analysis_set, analysis_set);
+%EXEC_FREQ(ptdata, analysis_group, analysis_group);
 
 data analysis; 
-    set     analysis_set(rename=(analysis_set=analysis))
-            analysis_group(rename=(analysis_group=analysis));
+    set analysis_set(rename=(analysis_set=analysis))
+        analysis_group(rename=(analysis_group=analysis));
 run;
 
 %INSERT_SQL(efficacy, ds_N, %str('', '—LŒø«‰ğÍ‘ÎÛW’c', count, percent), %str(efficacy=1));
@@ -115,8 +99,5 @@ run;
 
 %ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
 
-*Delete the working dataset;
+* Delete the working dataset;
 proc datasets lib=work nolist; save ptdata ds_n ptdata_contents; quit;
-
-
-
