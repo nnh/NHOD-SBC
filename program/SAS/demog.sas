@@ -114,7 +114,6 @@ SAS version : 9.4
 %inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
-proc contents data=ds_demog out=ds_colnames varnum noprint; run;
 %MEANS_FUNC(title='年齢', var_var=AGE);
 %FREQ_FUNC(title='クローン病', var_var=CrohnYN);
 %FREQ_FUNC(title='HNPCC', var_var=HNPCCYN);

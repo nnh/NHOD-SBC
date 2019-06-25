@@ -30,6 +30,7 @@ proc fcmp outlib=sasfunc.functions.test;
         return(temp);
     endsub;
 run;
+
 /*list the source code*/
 Options cmplib=_null_; 
 proc fcmp library=sasfunc.functions;
@@ -71,12 +72,13 @@ options cmplib = sasfunc.functions;
     quit;
 %mend INSERT_SQL;
 
-%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='');
+%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='', output_contents_ds=ds_colnames);
     /*  *** Functional argument ***  
         output_ds : Output dataset
         title_char_len : Character string length of title column
         items_char_len : Character string length of items column
         items_label : Title column label
+        output_contents_ds : Output contents dataset
         *** Example ***
         %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
     */
@@ -84,7 +86,7 @@ options cmplib = sasfunc.functions;
     %let cst_per='(%)';
     proc sql;
         create table &output_ds. (
-            title char(&title_char_len.) label="%sysfunc(ktruncate(&items_label., 2, %klength(&ope_group.)-1))", 
+            title char(&title_char_len.) label="%sysfunc(ktruncate(&items_label., 2, %sysfunc(lengthn(&items_label.)) - 2))", 
             items char(&items_char_len.) label='項目名',
             all_cnt num label=&all_group.,
             all_per num label="%sysfunc(compress(%sysfunc(cat(&all_group. , &cst_per.)), %str(%')))",
@@ -97,6 +99,7 @@ options cmplib = sasfunc.functions;
             non_ope_chemo_cnt num label="%sysfunc(compress(&non_ope_chemo., %str(%')))",
             non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
     quit;   
+    proc contents data=&output_ds. out=&output_contents_ds. varnum noprint; run;
 %mend CREATE_OUTPUT_DS;
 
 %macro SET_COLNAMES(input_ds);  
