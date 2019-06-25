@@ -80,7 +80,7 @@ proc sql noprint;
     insert into ds_N values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
 quit;
 
-%EXEC_FREQ(ptdata, efficacy, efficaty);
+%EXEC_FREQ(ptdata, efficacy, efficacy);
 %EXEC_FREQ(ptdata, analysis_set, analysis_set);
 %EXEC_FREQ(ptdata, analysis_group, analysis_group);
 

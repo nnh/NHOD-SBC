@@ -68,6 +68,14 @@ SAS version : 9.4
     %end;
 %mend INSERT_CANCEL;
 
+%macro EXEC_CANCEL;
+    %EXEC_FREQ(ptdata, %str(dsdecod*analysis_set), cancel);
+    %do i = 1 %to 2;
+        %INSERT_CANCEL(cancel, ds_cancel, &i.);
+    %end;
+    %INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
+%mend EXEC_CANCEL;
+
 **************************************************************************;
 %let thisfile=%GET_THISFILE_FULLPATH;
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
@@ -84,13 +92,7 @@ proc sql;
         reasons num label='íÜé~óùóR');
 quit;
 
-proc freq data=ptdata noprint;
-    tables dsdecod*analysis_set/ missing out=cancel;
-run;
-%DO 
-%INSERT_CANCEL(cancel, ds_cancel, 1);
-%INSERT_CANCEL(cancel, ds_cancel, 2);
-%INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
+%EXEC_CANCEL;
 
 *Delete the working dataset;
 proc datasets lib=work nolist; delete cancel temp_ds; run; quit;

@@ -84,7 +84,7 @@ options cmplib = sasfunc.functions;
     %let cst_per='(%)';
     proc sql;
         create table &output_ds. (
-            title char(&title_char_len.) label="%substr(&items_label., 2, %length(&ope_group.)-2)", 
+            title char(&title_char_len.) label="%sysfunc(ktruncate(&items_label., 2, %klength(&ope_group.)-1))", 
             items char(&items_char_len.) label='çÄñ⁄ñº',
             all_cnt num label=&all_group.,
             all_per num label="%sysfunc(compress(%sysfunc(cat(&all_group. , &cst_per.)), %str(%')))",
