@@ -46,3 +46,17 @@ data ds_input;
     set ptdata;
     where analysis_set=&non_ope_chemo.;
 run;
+
+proc sql;
+/*        insert into ds_demog(title, items, ope_non_chemo_cnt)
+            select '�Ǘᐔ', 'n', count from ds_n where Category=&ope_chemo.;*/
+        insert into ds_demog(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
+            select distinct 
+                    '�Ǘᐔ', 
+                    'n', 
+                    (select count from ds_n where Category=&efficacy_group.),
+                    (select count from ds_n where Category=&ope_chemo.),
+                    (select count from ds_n where Category=&ope_non_chemo.),
+                    (select count from ds_n where Category=&non_ope_chemo.),
+                    (select count from ds_n where Category=&non_ope_non_chemo.) from ds_n;
+quit;

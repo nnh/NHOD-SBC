@@ -89,7 +89,7 @@ data analysis;
         analysis_group(rename=(analysis_group=analysis));
 run;
 
-%INSERT_SQL(efficacy, ds_N, %str('', '—LŒø«‰ğÍ‘ÎÛW’c', count, percent), %str(efficacy=1));
+%INSERT_SQL(efficacy, ds_N, %str('', &efficacy_group., count, percent), %str(efficacy=1));
 %INSERT_SQL(analysis, ds_N, %str('', &ope_group., count, percent), %str(analysis=)&ope_group.);
 %INSERT_SQL(analysis, ds_N, %str('', &ope_chemo., count, percent), %str(analysis=)&ope_chemo.);
 %INSERT_SQL(analysis, ds_N, %str('', &ope_non_chemo., count, percent), %str(analysis=)&ope_non_chemo.);

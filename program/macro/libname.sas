@@ -11,38 +11,12 @@ proc datasets library=work kill nolist; quit;
 options mprint mlogic symbolgen minoperator noautocorrect;
 libname libads "&projectpath.\ptosh-format\ads" access=readonly;
 options fmtsearch=(libads);
-* Define functions;
-libname sasfunc "&projectpath.\program\function";
-options cmplib=sasfunc.functions; 
-proc fcmp outlib=sasfunc.functions.test;
-    deletefunc getDays;
-    deletefunc getYears;
-run;
-Quit;
-options cmplib=sasfunc.functions; 
-proc fcmp outlib=sasfunc.functions.test;
-    function getDays(start_date, end_date);
-        temp=end_date - start_date;
-        return(temp);
-    endsub;
-    function getYears(days);
-        temp=round((days / 365), 0.001);
-        return(temp);
-    endsub;
-run;
-
-/*list the source code*/
-Options cmplib=_null_; 
-proc fcmp library=sasfunc.functions;
-    listfunc getDays getYears;
-run;
-Quit;
-options cmplib = sasfunc.functions;
 * Path;
 %let extpath=&projectpath.\input\ext;
 %let outpath=&projectpath.\output;
 %let ads=&projectpath.\ptosh-format\ads;
 * Define constants;
+%let efficacy_group='有効性解析対象集団';
 %let all_group='全体';
 %let ope_group='治癒切除の解析対象集団';
 %let ope_chemo='治癒切除・Chemotherapy群';
@@ -72,13 +46,14 @@ options cmplib = sasfunc.functions;
     quit;
 %mend INSERT_SQL;
 
-%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='', output_contents_ds=ds_colnames);
+%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='', output_contents_ds=ds_colnames, input_n=ds_n);
     /*  *** Functional argument ***  
         output_ds : Output dataset
         title_char_len : Character string length of title column
         items_char_len : Character string length of items column
         items_label : Title column label
         output_contents_ds : Output contents dataset
+        input_n : Case number data set
         *** Example ***
         %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
     */
@@ -98,12 +73,30 @@ options cmplib = sasfunc.functions;
             non_ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_non_chemo. , &cst_per.)), %str(%')))",
             non_ope_chemo_cnt num label="%sysfunc(compress(&non_ope_chemo., %str(%')))",
             non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
+        insert into ds_demog(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
+            select distinct 
+                    '症例数', 
+                    'n', 
+                    (select count from &input_n. where Category=&efficacy_group.),
+                    (select count from &input_n. where Category=&ope_chemo.),
+                    (select count from &input_n. where Category=&ope_non_chemo.),
+                    (select count from &input_n. where Category=&non_ope_chemo.),
+                    (select count from &input_n. where Category=&non_ope_non_chemo.) from &input_n.;
     quit;   
     proc contents data=&output_ds. out=&output_contents_ds. varnum noprint; run;
 %mend CREATE_OUTPUT_DS;
 
 %macro SET_COLNAMES(input_ds);  
+    /*  *** Functional argument ***  
+        Input_ds : Input dataset
+        *** Output global variable
+        temp_name_cnt 
+        temp_name_per
+        *** Example ***
+        %SET_COLNAMES(temp1);
+    */
     %global temp_name_cnt temp_name_per;
+    %local temp_analysis_set;
     data _NULL_;
         set &input_ds.;
         if _N_=1 then do;
@@ -127,7 +120,7 @@ options cmplib = sasfunc.functions;
             call symput('var_len', LENGTH);
         end;
     run;
-%mend GET_LENGTH; 
+%mend GET_LENGTH;  
 
 %macro GET_TYPE(input_ds, var);
     %global var_type;
@@ -148,6 +141,7 @@ options cmplib = sasfunc.functions;
 
 %macro GET_FORMAT(input_ds, var);
     %global str_format;
+    %local test;
     %GET_TYPE(&input_ds., &var.);
     %let str_format=&var_type.;
     %if &str_format.=$ %then %do;
@@ -288,6 +282,7 @@ options cmplib = sasfunc.functions;
             drop analysis_set;
             rename count=&temp_name_cnt. percent=&temp_name_per. items=temp_items;
         run;
+        %symdel temp_name_cnt temp_name_per;
         proc sort data=temp&i. out=temp&i.; by temp_items; run; 
     %end;
  
@@ -367,3 +362,5 @@ options cmplib = sasfunc.functions;
     proc datasets lib=work nolist; delete temp_all_ds temp_ds temp_means tran_means; run; quit;
 
 %mend MEANS_FUNC;
+
+%inc "&projectpath.\program\macro\libfunction.sas";
