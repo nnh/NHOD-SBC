@@ -73,7 +73,7 @@ options fmtsearch=(libads);
             non_ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_non_chemo. , &cst_per.)), %str(%')))",
             non_ope_chemo_cnt num label="%sysfunc(compress(&non_ope_chemo., %str(%')))",
             non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
-        insert into ds_demog(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
+        insert into &output_ds.(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
             select distinct 
                     '�Ǘᐔ', 
                     'n', 

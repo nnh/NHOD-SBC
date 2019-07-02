@@ -40,23 +40,33 @@ SAS version : 9.4
 /* 解析対象群：
 治癒未切除・Chemotherapyの解析対象集団
 ─────────────────────────────
-    ベースライン        3ヵ月       6ヵ月 */
-%CREATE_OUTPUT_DS(output_ds=ds_tumor_reduction, items_label='腫瘍の縮小率');
-data ds_input;
-    set ptdata;
-    where analysis_set=&non_ope_chemo.;
+    ベースライン        3ヵ月Lesion3m       6ヵ月 */
+%let ds_output_tumor=ds_tumor_reduction;
+%let varname_t="SBCsum,Lesion3m,Lesion6m";
+%let label_t="ベースライン,3ヵ月,6ヵ月";
+%CREATE_OUTPUT_DS(output_ds=&ds_output_tumor., items_label='腫瘍の縮小率');
+data temp_1 temp_2 temp_3;
+    set &ds_output_tumor.;
+run;
+%TO_NUM_TEST_RESULTS(var=SBCsum)
+%MEANS_FUNC(title='SBCsum', var_var=SBCsum_num, output_ds=temp_1);
+%TO_NUM_TEST_RESULTS(var=Lesion3m)
+%MEANS_FUNC(title='Lesion3m', var_var=Lesion3m_num, output_ds=temp_2);
+%TO_NUM_TEST_RESULTS(var=Lesion6m)
+%MEANS_FUNC(title='Lesion6m', var_var=Lesion6m_num, output_ds=temp_3);
+data ds3;
+    set temp_1(keep=non_ope_chemo_cnt rename=(non_ope_chemo_cnt=aaa));
+    label aaa='ベースライン';
 run;
 
-proc sql;
-/*        insert into ds_demog(title, items, ope_non_chemo_cnt)
-            select '症例数', 'n', count from ds_n where Category=&ope_chemo.;*/
-        insert into ds_demog(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
-            select distinct 
-                    '症例数', 
-                    'n', 
-                    (select count from ds_n where Category=&efficacy_group.),
-                    (select count from ds_n where Category=&ope_chemo.),
-                    (select count from ds_n where Category=&ope_non_chemo.),
-                    (select count from ds_n where Category=&non_ope_chemo.),
-                    (select count from ds_n where Category=&non_ope_non_chemo.) from ds_n;
-quit;
+%macro aaa;
+    %local i;
+    %do i = 1 %to 3; 
+        %let temp_varname=%scan(&varname_t., &i., "," );
+        data abc;
+            set temp_&i.(keep=non_ope_chemo_cnt rename=(non_ope_chemo_cnt=&temp_varname.&i.));
+        run;
+    %end; 
+    *    label aaa='ベースライン';
+%mend;
+%aaa;
