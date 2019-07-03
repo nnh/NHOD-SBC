@@ -112,15 +112,25 @@ options fmtsearch=(libads);
     %let temp_name_per=%substr(&temp_name_cnt, 1, %sysfunc(length(&temp_name_cnt.))-3)per;
 %mend SET_COLNAMES;
 
-%macro GET_LENGTH(input_ds, var);
-    %global var_len;
+%macro GET_CONTENTS(input_ds, var, target_var);
+    /*  *** Functional argument *** 
+        input_ds : dataset to be tested
+        var : Variable name to be tested
+        target_var : Information to return
+        *** Example ***
+        proc contents data=ptdata out=ptdata_contents varnum noprint; run;
+        %GET_CONTENTS(ptdata_contents, MHCOM, length);
+    */
+    %global temp_return_contents;
+    %let temp_return_contents='';
     data _NULL_;
         set &input_ds.;
-        if NAME=&var. then do;
-            call symput('var_len', LENGTH);
+        where NAME=&var.;
+        if _N_=1 then do;
+            call symput('temp_return_contents', &target_var.);
         end;
     run;
-%mend GET_LENGTH;  
+%mend GET_CONTENTS;
 
 %macro GET_TYPE(input_ds, var);
     %global var_type;
@@ -141,35 +151,15 @@ options fmtsearch=(libads);
 
 %macro GET_FORMAT(input_ds, var);
     %global str_format;
-    %local test;
     %GET_TYPE(&input_ds., &var.);
     %let str_format=&var_type.;
     %if &str_format.=$ %then %do;
-        %GET_LENGTH(&input_ds., &var.);
-        %let str_format=%sysfunc(cat(&str_format., &var_len.));
+        %GET_CONTENTS(&input_ds., &var., length);
+        %let str_format=%sysfunc(cat(&str_format., &temp_return_contents.));
+        %symdel temp_return_contents;
     %end;
-
 %mend GET_FORMAT;
-
-%macro GET_VAR_FORMAT(input_ds, var, return_var);
-    /*  *** Functional argument *** 
-        input_ds : dataset to be tested
-        var : Variable to be tested
-        return_var : Variable to store the result
-        *** Example ***
-        proc contents data=ptdata out=ptdata_contents varnum noprint; run;
-        %let temp_fmt;
-        %GET_VAR_FORMAT(ptdata_contents, "chemCAT", temp_fmt);
-    */
-    data _NULL_;
-        set &input_ds.;
-        where NAME=&var.;
-        if _N_=1 then do;
-            call symput("&return_var.", FORMAT);
-        end;
-    run;
-%mend GET_VAR_FORMAT; 
-
+ 
 %macro TO_NUM_TEST_RESULTS(input_ds=ptdata, var='', output_ds=ptdata);
     /*  *** Functional argument *** 
         input_ds : Input dataset
@@ -230,17 +220,22 @@ options fmtsearch=(libads);
         *** Example ***
         %FREQ_FUNC(title='ƒNƒ[ƒ“•a', var_var=CrohnYN);
     */
-    %local temp_var_format format_f temp_len i;
-    %let temp_var_format='';
+    %local format_f temp_len i;
     %let format_f=.;
     /* Execute FREQ procedure */
     %EXEC_FREQ(&input_ds., &var_var., temp_all_ds);
     %EDIT_DS_ALL;
     %EXEC_FREQ(&input_ds., %str(&cat_var.*&var_var.), temp_ds);
     /* Get variable format */
-    %GET_VAR_FORMAT(ptdata_contents, "&var_var.", temp_var_format);
-    %let temp_len = %sysfunc(length(&temp_var_format.));
-    %if &temp_len. >=3 %then %do;
+    %GET_CONTENTS(ptdata_contents, "&var_var.", format);
+    %if &temp_return_contents ne '' %then %do;
+        %let temp_len=%sysfunc(length(&temp_return_contents.));
+    %end;
+    %else %do;
+        %let temp_len=0;
+    %end;
+    %symdel temp_return_contents;
+    %if &temp_len.>=3 %then %do;
         %let format_f=1;
     %end;
 
