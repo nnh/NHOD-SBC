@@ -72,7 +72,18 @@ data ptdata;
     by subjid;
 run;
 
-proc contents data=ptdata out=ptdata_contents varnum noprint; run;
+proc contents data=ptdata out=temp_ptdata_contents varnum noprint; run;
+data ptdata_contents;
+    set temp_ptdata_contents(rename=(FORMAT=temp_format));
+    attrib FORMAT label="•Ï”o—ÍŒ`®" length=$32 format=$32.;
+    if type=1 & length(temp_format)=1 then do;
+        FORMAT = "$";
+    end;
+    else do;
+        FORMAT= temp_format;
+    end;
+run;
+
 
 proc sql noprint;
     create table ds_N (Item char(200), Category char(200), count num, percent num);

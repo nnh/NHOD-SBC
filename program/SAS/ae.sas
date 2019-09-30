@@ -47,7 +47,7 @@ SAS version : 9.4
 　　　　　　　　　　　　　　　1     2   3   4
 -----------------------------------------------------
 末梢神経障害  AE_MortoNeuropathy_trm AE_SensNeuropathy_trm
-下痢  AE_diarrhea_trm
+下痢  AE_diarrhea_trm 
 血液毒性
 　好中球減少  AE_DecreasNeut_trm
 　血小板減少  AE_DecreasPLT_trm
@@ -58,9 +58,22 @@ SAS version : 9.4
 -----------------------------------------------------
 */
 %macro AE_EXEC;
-    %local ds_output_ae varname_t label_t i temp_varname temp_label;
+    %local ds_output_ae varname_t i temp_varname temp_label;
     %let ds_output_ae=ds_ae;
     %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,AE_DecreasNeut,AE_Skin,AE_Anorexia,AE_HighBDPRES,AE_Prote";
-    %let label_t="ベースライン,3ヵ月,6ヵ月";
-    %CREATE_OUTPUT_DS(output_ds=test, items_label='腫瘍の縮小率');
+    %let label_t="末梢神経障害,下痢,好中球減少,血小板減少,皮膚障害,食欲不振,高血圧,蛋白尿";
+    %let max_index = %sysfunc(countc(&varname_t., ','));
+    %let max_index = %eval(&max_index. + 1);
+    %CREATE_OUTPUT_DS(output_ds=&ds_output_ae., items_label='治療による有害事象');
+    %do i = 1 %to &max_index.; 
+        data temp_ae_&i.;
+            set &ds_output_ae.;
+        run;
+        %let temp_varname=%scan(&varname_t., &i., ",");
+        %let temp_label=%scan(&label_t., &i., ",");
+        %FREQ_FUNC(input_ds=ptdata, title=&temp_varname., cat_var=analysis_set, var_var=&temp_varname._grd, output_ds=temp_ae_&i.);
+
+    %end;
 %mend AE_EXEC;
+%AE_EXEC;
+
