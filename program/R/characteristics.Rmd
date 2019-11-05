@@ -1,0 +1,154 @@
+---
+title: "Characteristics"
+author: "Kato Kiroku"
+date: "`r format(Sys.time(), '%Y/%m/%d %H:%M')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(results = "asis",
+               comment = NA,
+               cache = FALSE,
+               echo = FALSE)
+library(summarytools)
+st_options(plain.ascii = FALSE,
+           style = "rmarkdown",
+           headings = FALSE,
+           footnote = NA,
+           subtitle.emphasis = FALSE)
+library(magrittr)
+library(dplyr)
+library(openxlsx)
+```
+
+```{r preprocessing, include=FALSE}
+getwd()
+prtpath <- "//ARONAS/Stat/Trials/NHO/NHOD-SBC"
+adspath <- paste0(prtpath, "/ptosh-format/ads")
+docpath <- paste0(prtpath, "/document")
+# rawpath <- paste0(prtpath, "/input/rawdata")
+# extpath <- paste0(prtpath, "/input/ext")
+# outpath <- paste0(prtpath, "/output/QC")
+outpath <- "C:/Users/KirokuKato/Desktop/R"
+ptdata <- read.csv(paste0(adspath, "/ptdata.csv"), na.strings = "")
+group <- read.xlsx(paste0(docpath, "/解析対象集団一覧.xlsx"), na.strings = "")
+group <- rename(group, SUBJID = 症例登録番号)
+ptdata <- merge(ptdata, group, by = "SUBJID", all = T)
+ptdata_2 <- subset(ptdata, select = c("SUBJID", "MHCOM"))
+ptdata_2 <- subset(ptdata_2, MHCOM != "")
+row.names(ptdata_2) <- 1:nrow(ptdata_2)
+```
+
+## AGE
+```{r AGE}
+ptdata %>%
+  descr(AGE, stats = "common", justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  descr(AGE, stats = "common", justify = "l")
+```
+
+## CrohnYN
+```{r CrohnYN}
+ptdata %>%
+  freq(CrohnYN, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(CrohnYN, cumul = FALSE, justify = "l")
+```
+
+## HNPCCYN
+```{r HNPCCYN}
+ptdata %>%
+  freq(HNPCCYN, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(HNPCCYN, cumul = FALSE, justify = "l")
+```
+
+## TNMCAT
+```{r TNMCAT}
+ptdata %>%
+  freq(TNMCAT, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(TNMCAT, cumul = FALSE, justify = "l")
+```
+
+## PS
+```{r PS}
+ptdata %>%
+  freq(PS, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(PS, cumul = FALSE, justify = "l")
+```
+
+## SBCSITE
+```{r SBCSITE}
+ptdata %>%
+  freq(SBCSITE, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(SBCSITE, cumul = FALSE, justify = "l")
+```
+
+## SBCdegree
+```{r SBCdegree}
+ptdata %>%
+  freq(SBCdegree, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(SBCdegree, cumul = FALSE, justify = "l")
+```
+
+## RASYN
+```{r RASYN}
+ptdata %>%
+  freq(RASYN, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(RASYN, cumul = FALSE, justify = "l")
+```
+
+## metaYN
+```{r metaYN}
+ptdata %>%
+  freq(metaYN, cumul = FALSE, justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(metaYN, cumul = FALSE, justify = "l")
+```
+
+## LDH
+```{r LDH}
+ptdata %>%
+  descr(LDH, stats = "common", justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  descr(LDH, stats = "common", justify = "l")
+```
+
+## CEA
+```{r CEA}
+ptdata %>%
+  descr(CEA, stats = "common", justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  descr(CEA, stats = "common", justify = "l")
+```
+
+## CA199
+```{r CA199}
+ptdata %>%
+  descr(CA199, stats = "common", justify = "l")
+ptdata %>%
+  group_by(解析対象集団) %>%
+  descr(CA199, stats = "common", justify = "l")
+```
+
+## Multiple primary cancers
+```{r Multiple primary cancers}
+kable(ptdata_2, format = "markdown")
+```

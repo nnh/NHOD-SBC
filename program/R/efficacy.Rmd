@@ -1,0 +1,64 @@
+---
+title: "Efficacy"
+author: "Kato Kiroku"
+date: "`r format(Sys.time(), '%Y/%m/%d %H:%M')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(results = "asis",
+               comment = NA,
+               cache = FALSE,
+               echo = FALSE)
+library(summarytools)
+st_options(plain.ascii = FALSE,
+           style = "rmarkdown",
+           headings = FALSE,
+           footnote = NA,
+           subtitle.emphasis = FALSE)
+library(magrittr)
+library(dplyr)
+library(openxlsx)
+```
+
+```{r preprocessing, include=FALSE}
+getwd()
+prtpath <- "//ARONAS/Stat/Trials/NHO/NHOD-SBC"
+adspath <- paste0(prtpath, "/ptosh-format/ads")
+docpath <- paste0(prtpath, "/document")
+# rawpath <- paste0(prtpath, "/input/rawdata")
+# extpath <- paste0(prtpath, "/input/ext")
+# outpath <- paste0(prtpath, "/output/QC")
+outpath <- "C:/Users/KirokuKato/Desktop/R"
+ptdata <- read.csv(paste0(adspath, "/ptdata.csv"), na.strings = "")
+group <- read.xlsx(paste0(docpath, "/解析対象集団一覧.xlsx"), na.strings = "")
+group <- rename(group, SUBJID = 症例登録番号)
+ptdata <- merge(ptdata, group, by = "SUBJID", all = T)
+# temp <- subset(ptdata, select = c("SUBJID", "MHCOM"))
+# temp <- subset(temp, MHCOM != "")
+# row.names(temp) <- 1:nrow(temp)
+# ptdata_1 <- subset(ptdata, 解析対象集団 == "治癒切除・Chemotherapy群" | 解析対象集団 ==  "治癒切除・non-Chemotherapy群")
+# ptdata_2 <- subset(ptdata, 解析対象集団 == "治癒切除・Chemotherapy群")
+# ptdata_3 <- subset(ptdata, 解析対象集団 == "治癒未切除・Chemotherapy群")
+ptdata$censor <- ifelse(ptdata$SUDTHFL == "死亡", 0,
+                        ifelse(ptdata$SUDTHFL == "生存", 1, ""))
+ptdata$time <- ifelse(ptdata$SUDTHFL == "死亡", difftime(ptdata$DTHDTC, ptdata$DIGDTC, units = c("days")),
+                      ifelse(ptdata$SUDTHFL == "生存", difftime(ptdata$SURVDTC, ptdata$DIGDTC, units = c("days")), ""))
+ptdata$treatment_1 <- ifelse(substr(ptdata$解析対象集団, 1, 4) == "治癒切除", "治癒切除",
+                           ifelse(substr(ptdata$解析対象集団, 1, 5) == "治癒未切除", "治癒未切除", ""))
+ptdata$treatment_2 <- ifelse(ptdata$解析対象集団 == "治癒切除・non-Chemotherapy群", "治癒切除・non-Chemotherapy群",
+                           ifelse(ptdata$解析対象集団 == "治癒切除・Chemotherapy群", "治癒切除・Chemotherapy群", ""))
+ptdata$treatment_3 <- ifelse(ptdata$解析対象集団 == "治癒未切除・non-Chemotherapy群", "治癒未切除・non-Chemotherapy群",
+                           ifelse(ptdata$解析対象集団 == "治癒未切除・Chemotherapy群", "治癒未切除・Chemotherapy群", ""))
+```
+
+## Surgical curability
+```{r Surgical curability}
+# ptdata_1 %>%
+#   group_by(解析対象集団) %>%
+#   freq(resectionCAT, cumul = FALSE, justify = "l")
+kable(ptdata)
+```
+
+

@@ -1,0 +1,72 @@
+---
+title: "Treatment"
+author: "Kato Kiroku"
+date: "`r format(Sys.time(), '%Y/%m/%d %H:%M')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(results = "asis",
+               comment = NA,
+               cache = FALSE,
+               echo = FALSE)
+library(summarytools)
+st_options(plain.ascii = FALSE,
+           style = "rmarkdown",
+           headings = FALSE,
+           footnote = NA,
+           subtitle.emphasis = FALSE)
+library(magrittr)
+library(dplyr)
+library(openxlsx)
+```
+
+```{r preprocessing, include=FALSE}
+getwd()
+prtpath <- "//ARONAS/Stat/Trials/NHO/NHOD-SBC"
+adspath <- paste0(prtpath, "/ptosh-format/ads")
+docpath <- paste0(prtpath, "/document")
+# rawpath <- paste0(prtpath, "/input/rawdata")
+# extpath <- paste0(prtpath, "/input/ext")
+# outpath <- paste0(prtpath, "/output/QC")
+outpath <- "C:/Users/KirokuKato/Desktop/R"
+ptdata <- read.csv(paste0(adspath, "/ptdata.csv"), na.strings = "")
+group <- read.xlsx(paste0(docpath, "/解析対象集団一覧.xlsx"), na.strings = "")
+group <- rename(group, SUBJID = 症例登録番号)
+ptdata <- merge(ptdata, group, by = "SUBJID", all = T)
+# temp <- subset(ptdata, select = c("SUBJID", "MHCOM"))
+# temp <- subset(temp, MHCOM != "")
+# row.names(temp) <- 1:nrow(temp)
+ptdata_1 <- subset(ptdata, 解析対象集団 == "治癒切除・Chemotherapy群" | 解析対象集団 ==  "治癒切除・non-Chemotherapy群")
+ptdata_2 <- subset(ptdata, 解析対象集団 == "治癒切除・Chemotherapy群")
+ptdata_3 <- subset(ptdata, 解析対象集団 == "治癒未切除・Chemotherapy群")
+```
+
+## Surgical curability
+```{r Surgical curability}
+ptdata_1 %>%
+  group_by(解析対象集団) %>%
+  freq(resectionCAT, cumul = FALSE, justify = "l")
+```
+
+## The adjuvant chemotherapy regimen
+```{r The adjuvant chemotherapy regimen}
+ptdata_2 %>%
+  group_by(解析対象集団) %>%
+  freq(adjuvantCAT, cumul = FALSE, justify = "l")
+```
+
+## The first-line chemotherapy regimen
+```{r The first-line chemotherapy regimen}
+ptdata_3 %>%
+  group_by(解析対象集団) %>%
+  freq(chemCAT, cumul = FALSE, justify = "l")
+```
+
+## 原発巣切除の有無
+```{r PLresection}
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(PLresectionYN, cumul = FALSE, justify = "l")
+```
