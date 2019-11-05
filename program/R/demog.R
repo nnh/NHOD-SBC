@@ -18,7 +18,7 @@ prtpath <- "//ARONAS/Stat/Trials/NHO/NHOD-SBC"
 
 adspath <- paste0(prtpath, "/ptosh-format/ads")
 docpath <- paste0(prtpath, "/document")
-# rawpath <- paste0(prtpath, "/input/rawdata")
+rawpath <- paste0(prtpath, "/input/rawdata")
 # extpath <- paste0(prtpath, "/input/ext")
 # outpath <- paste0(prtpath, "/output/QC")
 outpath <- "C:/Users/KirokuKato/Desktop/R"
@@ -34,6 +34,7 @@ summary(ptdata$AGE)
 descr(ptdata$AGE, stats = "common", style = "rmarkdown")
 
 # SEX
+registration <- read.csv(paste0(rawpath, "/SBC_registration_190524_0949.csv"), na.strings = "")
 
 # CrohnYN
 # ptdata %>% freq(CrohnYN)
