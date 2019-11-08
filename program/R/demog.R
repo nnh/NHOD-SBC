@@ -6,12 +6,14 @@
 # Output : .html
 ########################################
 
-
 library(magrittr)
 library(frequency)
 library(dplyr)
 library(summarytools)
 library(openxlsx)
+library(survival)
+install.packages("anytime")
+library(anytime)
 
 getwd()
 prtpath <- "//ARONAS/Stat/Trials/NHO/NHOD-SBC"
@@ -28,6 +30,29 @@ group <- read.xlsx(paste0(docpath, "/解析対象集団一覧.xlsx"), na.strings
 group <- rename(group, SUBJID = 症例登録番号)
 ptdata <- merge(ptdata, group, by = "SUBJID", all = T)
 
+ptdata$DIGDTC <- anydate(ptdata$DIGDTC)
+ptdata$DTHDTC <- anydate(ptdata$DTHDTC)
+ptdata$SURVDTC <- anydate(ptdata$SURVDTC)
+
+ptdata$event <- ifelse(ptdata$SUDTHFL == "死亡", 1,
+                        ifelse(ptdata$SUDTHFL == "生存", 0, ""))
+ptdata$time <- ifelse(ptdata$SUDTHFL == "死亡", as.numeric(difftime(ptdata$DTHDTC, ptdata$DIGDTC, units = c("days"))),
+                      ifelse(ptdata$SUDTHFL == "生存", as.numeric(difftime(ptdata$SURVDTC, ptdata$DIGDTC, units = c("days"))), ""))
+
+
+
+ptdata$time <- as.numeric(ptdata$time)
+class(ptdata$time)
+ptdata$event <- as.numeric(ptdata$event)
+class(ptdata$censor)
+
+with(data = ptdata, Surv(time, event))[1:10]
+
+survfit(Surv(time, event)~1, data=ptdata)
+km <- survfit(Surv(time, event)~1, data=ptdata)
+plot(km, las=1, xlab="Survival Time (days)", ylab="Overall Survival")
+survfit(Surv(time, event)~解析対象集団, data=ptdata)
+km_1
 # AGE
 # ptdata %>% summary(AGE)
 summary(ptdata$AGE)

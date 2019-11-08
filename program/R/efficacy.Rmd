@@ -20,6 +20,10 @@ st_options(plain.ascii = FALSE,
 library(magrittr)
 library(dplyr)
 library(openxlsx)
+library(survival)
+library(anytime)
+library(stringr)
+library(survminer)
 ```
 
 ```{r preprocessing, include=FALSE}
@@ -41,24 +45,49 @@ ptdata <- merge(ptdata, group, by = "SUBJID", all = T)
 # ptdata_1 <- subset(ptdata, 解析対象集団 == "治癒切除・Chemotherapy群" | 解析対象集団 ==  "治癒切除・non-Chemotherapy群")
 # ptdata_2 <- subset(ptdata, 解析対象集団 == "治癒切除・Chemotherapy群")
 # ptdata_3 <- subset(ptdata, 解析対象集団 == "治癒未切除・Chemotherapy群")
-ptdata$censor <- ifelse(ptdata$SUDTHFL == "死亡", 0,
-                        ifelse(ptdata$SUDTHFL == "生存", 1, ""))
+ptdata$DIGDTC <- anydate(ptdata$DIGDTC)
+ptdata$DTHDTC <- anydate(ptdata$DTHDTC)
+ptdata$SURVDTC <- anydate(ptdata$SURVDTC)
+ptdata$event <- ifelse(ptdata$SUDTHFL == "死亡", 1,
+                        ifelse(ptdata$SUDTHFL == "生存", 0, ""))
 ptdata$time <- ifelse(ptdata$SUDTHFL == "死亡", difftime(ptdata$DTHDTC, ptdata$DIGDTC, units = c("days")),
                       ifelse(ptdata$SUDTHFL == "生存", difftime(ptdata$SURVDTC, ptdata$DIGDTC, units = c("days")), ""))
+
+ptdata$time <- as.numeric(ptdata$time)
+class(ptdata$time)
+ptdata$event <- as.numeric(ptdata$event)
+class(ptdata$censor)
 ptdata$treatment_1 <- ifelse(substr(ptdata$解析対象集団, 1, 4) == "治癒切除", "治癒切除",
-                           ifelse(substr(ptdata$解析対象集団, 1, 5) == "治癒未切除", "治癒未切除", ""))
+                           ifelse(substr(ptdata$解析対象集団, 1, 5) == "治癒未切除", "治癒未切除", NA))
 ptdata$treatment_2 <- ifelse(ptdata$解析対象集団 == "治癒切除・non-Chemotherapy群", "治癒切除・non-Chemotherapy群",
-                           ifelse(ptdata$解析対象集団 == "治癒切除・Chemotherapy群", "治癒切除・Chemotherapy群", ""))
+                           ifelse(ptdata$解析対象集団 == "治癒切除・Chemotherapy群", "治癒切除・Chemotherapy群", NA))
 ptdata$treatment_3 <- ifelse(ptdata$解析対象集団 == "治癒未切除・non-Chemotherapy群", "治癒未切除・non-Chemotherapy群",
-                           ifelse(ptdata$解析対象集団 == "治癒未切除・Chemotherapy群", "治癒未切除・Chemotherapy群", ""))
+                           ifelse(ptdata$解析対象集団 == "治癒未切除・Chemotherapy群", "治癒未切除・Chemotherapy群", NA))
 ```
 
 ## Surgical curability
 ```{r Surgical curability}
-# ptdata_1 %>%
-#   group_by(解析対象集団) %>%
-#   freq(resectionCAT, cumul = FALSE, justify = "l")
-kable(ptdata)
+km_1 <- survfit(Surv(time, event)~treatment_1, data=ptdata)
+plot(km_1, las=1, xlab="Survival Time (days)", ylab="Overall Survival", col = 2:3, pch = 3)
+treatment <- str_split_fixed(rownames(summary(km_1)$table), "=", 2)[, 2]
+legend("bottomleft", legend = treatment, lty=1, col=2:3)
+summary(km_1, times = c(365*(1:3)))
 ```
 
+## Surgical curability
+```{r S2}
+km_2 <- survfit(Surv(time, event)~treatment_2, data=ptdata)
+plot(km_2, las=1, xlab="Survival Time (days)", ylab="Overall Survival", col = 2:3, pch = 3)
+treatment <- str_split_fixed(rownames(summary(km_2)$table), "=", 2)[, 2]
+legend("bottomleft", legend = treatment, lty=1, col=2:3)
+summary(km_2, times = c(365*(1:3)))
+```
 
+## Surgical curability
+```{r S3}
+km_3 <- survfit(Surv(time, event)~treatment_3, data=ptdata)
+plot(km_3, las=1, xlab="Survival Time (days)", ylab="Overall Survival", col = 2:3, pch = 3)
+treatment <- str_split_fixed(rownames(summary(km_3)$table), "=", 2)[, 2]
+legend("bottomleft", legend = treatment, lty=1, col=2:3)
+summary(km_3, times = c(365*(1:3)))
+```
