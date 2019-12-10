@@ -91,3 +91,11 @@ treatment <- str_split_fixed(rownames(summary(km_3)$table), "=", 2)[, 2]
 legend("bottomleft", legend = treatment, lty=1, col=2:3)
 summary(km_3, times = c(365*(1:3)))
 ```
+
+## Surgical curability
+```{r S4}
+ptdata %>%
+  group_by(解析対象集団) %>%
+  freq(DTHFL, cumul = FALSE, justify = "l")
+  # freq(DTHFL, report.nas = FALSE, cumul = FALSE, justify = "l")
+```
