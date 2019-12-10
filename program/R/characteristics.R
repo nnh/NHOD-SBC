@@ -3,7 +3,7 @@
 # Study : NHOD-SBC
 # Published : 2019/12/09
 # Author : Kato Kiroku
-# Version : 19.12.09.001
+# Version : 19.12.09.000
 ##################################################
 
 library(openxlsx)
@@ -35,7 +35,7 @@ dsv <- function(x, y){
               max = round(max(eval(as.symbol(x))), digits = 1),
               min = round(min(eval(as.symbol(x))), digits = 1))
   df2 <- data.frame(t(df1[-1]))
-  for (i in 1:4) {colnames(df2)[i] <- (df1[i, 1])}
+  for (i in 1:ncol(df2)) {colnames(df2)[i] <- (df1[i, 1])}
   df3 <- data.frame(characteristics = "", category = rownames(df2), df2, stringsAsFactors = FALSE)
   df3[1, 1] <- y
   assign(x, df3, .GlobalEnv)
@@ -61,10 +61,10 @@ frequency <- function(x, y, z){
     as.data.frame.array
   dfPercent[] <- paste0("(", format(unlist(dfPercent)),"%)")
   # CONCATENATION of dfCount and dfPercent
-  for (i in 1:4) {dfCount[[i]] <- paste(dfCount[[i]], dfPercent[[i]])}
+  for (i in 1:ncol(dfCount)) {dfCount[[i]] <- paste(dfCount[[i]], dfPercent[[i]])}
   df1 <- data.frame(category = rownames(dfCount), dfCount, stringsAsFactors = FALSE)
   df2 <- merge(df1, dfCategory, by = "category", all = T)
-  df2[is.na(df2)] <- "0 (0%)"
+  df2[is.na(df2)] <- "0 (  0.0%)"
   df3 <- data.frame(characteristics = "", df2, stringsAsFactors = FALSE)
   df3[1, 1] <- y
   assign(x, df3, .GlobalEnv)
@@ -108,4 +108,4 @@ write.csv(characteristics, paste0(outpath, "/characteristics.csv"), row.names = 
 MultiplePrimaryCancers <- ptdata %>%
   select("SUBJID", "MHCOM") %>%
   drop_na(MHCOM)
-write.csv(MultiplePrimaryCancer, paste0(outpath, "/multiple_primary_cancers.csv"), row.names = FALSE, na = "")
+write.csv(MultiplePrimaryCancers, paste0(outpath, "/multiple_primary_cancers.csv"), row.names = FALSE, na = "")
