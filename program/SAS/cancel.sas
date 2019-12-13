@@ -13,7 +13,7 @@ SAS version : 9.4
         *** Example ***
         %INSERT_CANCEL(cancel, ds_cancel, 1);
     */
-    %local str_item cnt1 cnt2 cnt3 cnt4 per1 per2 per3 per4;
+    %local str_item cnt1 cnt2 cnt3 cnt4;
     proc sql noprint;
         select * from &input_ds. where dsdecod=&cond.;
     quit;
@@ -31,12 +31,8 @@ SAS version : 9.4
             select count into:cnt2 from temp_ds where analysis_set=&ope_chemo.;
             select count into:cnt3 from temp_ds where analysis_set=&non_ope_non_chemo.;
             select count into:cnt4 from temp_ds where analysis_set=&non_ope_chemo.;
-            select percent into:per1 from temp_ds where analysis_set=&ope_non_chemo.;
-            select percent into:per2 from temp_ds where analysis_set=&ope_chemo.;
-            select percent into:per3 from temp_ds where analysis_set=&non_ope_non_chemo.;
-            select percent into:per4 from temp_ds where analysis_set=&non_ope_chemo.;
             insert into &output_ds.
-            values("&str_item.", &cnt1., &per1., &cnt2., &per2. ,&cnt3., &per3. ,&cnt4., &per4.); 
+            values("&str_item.", &cnt1., &cnt2. ,&cnt3. ,&cnt4.); 
         quit;
     %end;
 %mend INSERT_CANCEL;
@@ -50,17 +46,19 @@ SAS version : 9.4
 %mend EXEC_CANCEL;
 
 * 5.2. Breakdown of cases and count of discontinued cases;
-%CREATE_OUTPUT_DS(output_ds=cancel, items_label='è«ó·ÇÃì‡ñÛÇ∆íÜé~ó·èWåv');
-data ds_cancel;
-    set cancel;
-    drop all_cnt all_per title;
-run;
-
+proc sql;
+    create table ds_cancel (
+        cancel char(6) label='è«ó·ÇÃì‡ñÛÇ∆íÜé~ó·èWåv',
+        ope_non_chemo num label=&ope_non_chemo.,
+        ope_chemo num label=&ope_chemo.,
+        non_ope_non_chemo num label=&non_ope_non_chemo.,
+        non_ope_chemo num label=&non_ope_chemo.
+   );
+quit;
 proc sql;
     create table ds_reasons_for_withdrawal(
         reasons num label='íÜé~óùóR');
 quit;
-
 %EXEC_CANCEL;
 
 %ds2csv (data=ds_cancel, runmode=b, csvfile=&outpath.\ds_cancel.csv, labels=Y);
