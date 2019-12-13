@@ -5,33 +5,6 @@ Author : Ohtsuka Mariko
 Date : 2019-06-04
 SAS version : 9.4
 **************************************************************************;
-*Define constants;
-**************************************************************************;
-*Define macros;
-%macro GET_THISFILE_FULLPATH;
-    %local _fullpath _path;
-    %let _fullpath=;
-    %let _path=;
-
-    %if %length(%sysfunc(getoption(sysin)))=0 %then
-      %let _fullpath=%sysget(sas_execfilepath);
-    %else
-      %let _fullpath=%sysfunc(getoption(sysin));
-    &_fullpath.
-%mend GET_THISFILE_FULLPATH;
-
-%macro GET_DIRECTORY_PATH(input_path, directory_level);
-    %let input_path_len=%length(&input_path.);
-    %let temp_path=&input_path.;
-    %do i = 1 %to &directory_level.;
-        %let temp_len=%scan(&temp_path., -1, '\');
-        %let temp_path=%substr(&temp_path., 1, %length(&temp_path.)-%length(&temp_len.)-1);
-        %put &temp_path.;
-    %end;
-    %let _path=&temp_path.;
-    &_path.
-%mend GET_DIRECTORY_PATH;
-
 %macro INSERT_CANCEL(input_ds, output_ds, cond);
     /*  *** Functional argument ***
         input_ds : Table name of select statement 
@@ -76,11 +49,7 @@ SAS version : 9.4
     %INSERT_SQL(ptdata, ds_reasons_for_withdrawal, %str(dsterm), %str(dsterm^=.));
 %mend EXEC_CANCEL;
 
-**************************************************************************;
-%let thisfile=%GET_THISFILE_FULLPATH;
-%let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
-%inc "&projectpath.\program\sas\analysis_sets.sas";
-**************************************************************************;
+* 5.2. Breakdown of cases and count of discontinued cases;
 %CREATE_OUTPUT_DS(output_ds=cancel, items_label='è«ó·ÇÃì‡ñÛÇ∆íÜé~ó·èWåv');
 data ds_cancel;
     set cancel;
@@ -94,5 +63,8 @@ quit;
 
 %EXEC_CANCEL;
 
-*Delete the working dataset;
+%ds2csv (data=ds_cancel, runmode=b, csvfile=&outpath.\ds_cancel.csv, labels=Y);
+%ds2csv (data=ds_reasons_for_withdrawal, runmode=b, csvfile=&outpath.\ds_reasons_for_withdrawal.csv, labels=Y);
+
+* Delete the working dataset;
 proc datasets lib=work nolist; delete cancel temp_ds; run; quit;
