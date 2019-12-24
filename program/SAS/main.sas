@@ -43,4 +43,6 @@ SAS version : 9.4
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\treatment.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\os_pfs.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\response.sas";
+%include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\tumor_reduction.sas";
+%include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\ae.sas";
 * *** main program end ***;

@@ -2,40 +2,8 @@
 Program Name : ae.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-07-03
+Date : 2019-12-24
 SAS version : 9.4
-**************************************************************************;
-*Define constants;
-**************************************************************************;
-*Define macros;
-%macro GET_THISFILE_FULLPATH;
-    %local _fullpath _path;
-    %let _fullpath=;
-    %let _path=;
-
-    %if %length(%sysfunc(getoption(sysin)))=0 %then
-      %let _fullpath=%sysget(sas_execfilepath);
-    %else
-      %let _fullpath=%sysfunc(getoption(sysin));
-    &_fullpath.
-%mend GET_THISFILE_FULLPATH;
-
-%macro GET_DIRECTORY_PATH(input_path, directory_level);
-    %let input_path_len=%length(&input_path.);
-    %let temp_path=&input_path.;
-    %do i = 1 %to &directory_level.;
-        %let temp_len=%scan(&temp_path., -1, '\');
-        %let temp_path=%substr(&temp_path., 1, %length(&temp_path.)-%length(&temp_len.)-1);
-        %put &temp_path.;
-    %end;
-    %let _path=&temp_path.;
-    &_path.
-%mend GET_DIRECTORY_PATH;
-
-**************************************************************************;
-%let thisfile=%GET_THISFILE_FULLPATH;
-%let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
-%inc "&projectpath.\program\sas\analysis_sets.sas";
 **************************************************************************;
 /*
 âêÕëŒè€åQÅF
@@ -57,23 +25,39 @@ SAS version : 9.4
 í`îíîA AE_Prote_trm
 -----------------------------------------------------
 */
-%macro AE_EXEC;
-    %local ds_output_ae varname_t i temp_varname temp_label;
-    %let ds_output_ae=ds_ae;
+%macro AE_EXEC(target_column, output_ds);
+    %local ds_output_ae varname_t i temp_varname temp_label max_index colname;
     %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,AE_DecreasNeut,AE_Skin,AE_Anorexia,AE_HighBDPRES,AE_Prote";
     %let label_t="ññèΩê_åoè·äQ,â∫óü,çDíÜãÖå∏è≠,ååè¨î¬å∏è≠,îÁïÜè·äQ,êHó~ïsêU,çÇååà≥,í`îíîA";
     %let max_index = %sysfunc(countc(&varname_t., ','));
     %let max_index = %eval(&max_index. + 1);
-    %CREATE_OUTPUT_DS(output_ds=&ds_output_ae., items_label='é°ó√Ç…ÇÊÇÈóLäQéñè€');
     %do i = 1 %to &max_index.; 
-        data temp_ae_&i.;
-            set &ds_output_ae.;
-        run;
         %let temp_varname=%scan(&varname_t., &i., ",");
         %let temp_label=%scan(&label_t., &i., ",");
-        %FREQ_FUNC(input_ds=ptdata, title=&temp_varname., cat_var=analysis_set, var_var=&temp_varname._grd, output_ds=temp_ae_&i.);
-
+        %SET_FREQ(temp_ae, 'é°ó√Ç…ÇÊÇÈóLäQéñè€', &temp_varname._grd, %str(ope_chemo_cnt), response_ope_no_chemo.csv);
+        data ae_&i.;
+            set temp_ae(rename=(items=temp_items));
+            items=strip(temp_items);
+            drop temp_items;
+        run;
+        %let colname=B.&target_column.;
+        %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, %quote(items char(1), &target_column. num), items, %quote(&colname.), %quote('1', '2', '3', '4'), &temp_label.);
+        %if &i.=1 %then %do;
+            data &output_ds.;
+                set temp_join_ae(rename=(&target_column.=&temp_varname.));
+            run;
+        %end;
+        %else %do;
+            data temp_output_ds;
+                set &output_ds.;
+            run;
+            proc delete data=&output_ds.;
+            run;
+            proc sql noprint;
+                create table &output_ds. as
+                    select A.*, &colname. as &temp_varname. from temp_output_ds A inner join temp_join_ae B on A.items = B.items;
+            quit;
+        %end;
     %end;
 %mend AE_EXEC;
-%AE_EXEC;
-
+%AE_EXEC(ope_chemo_cnt, ae_ope_chemo_cnt);
