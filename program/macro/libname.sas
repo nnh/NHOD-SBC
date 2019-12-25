@@ -377,5 +377,39 @@ options fmtsearch=(libads);
     run;
     %ds2csv (data=&output_ds_name., runmode=b, csvfile=&outpath.\&csv_name., labels=Y);
 %mend SET_FREQ;
+%macro JOIN_TO_TEMPLATE(input_ds, output_ds, output_cols, join_key_colname, input_cols, template_rows, input_col_label);
+    /*  *** Functional argument ***  
+        input_ds : Input dataset
+        output_ds : Output dataset
+        output_cols : Output dataset columns
+        join_key_colname : Left join key
+        input_cols : Input dataset columns
+        template_rows : Output dataset rows
+        input_col_label : Column label
+        *** Example ***
+        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote(B.ope_non_chemo_cnt), %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), Ž¡—Ã‚È‚µ);
+    */
+    %local i delim_count temp_col;
+    /* Count delimiters and get number of observations */
+    %let delim_count = %sysfunc(count(&template_rows, %quote(,)));
+    /* Create an observation for the argument output_cols in the template dataset and add the variable seq for sorting */
+    proc sql noprint;
+        create table template_ds
+            (&output_cols., seq num);
+        %do i = 1 %to %eval(&delim_count.+1);
+            %let temp_col=%sysfunc(scan(&template_rows, &i., %quote(,)));
+            insert into template_ds values(&temp_col., ., &i.);
+        %end;
+    quit;
+    /* Merge template dataset and input dataset and sort in seq order */
+    proc sql noprint;
+        create table &output_ds. as
+            select A.seq, A.&join_key_colname., &input_cols. label="&input_col_label." from template_ds A left join &input_ds. B on A.&join_key_colname. = B.&join_key_colname. order by seq;
+    quit;
+    /* Delete variable seq */
+    proc sql noprint;
+        alter table &output_ds. drop seq;
+    quit;
+%mend JOIN_TO_TEMPLATE;
 
 %inc "&projectpath.\program\macro\libfunction.sas";
