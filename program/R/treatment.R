@@ -43,7 +43,7 @@ frequency <- function(x, y){
   # PERCENT
   dfPercent <- round(prop.table(as.matrix(dfCount), margin = 2)*100, digits = 1) %>%
     as.data.frame.array
-  dfPercent[] <- paste0("(", format(unlist(dfPercent)),"%)")
+  dfPercent[] <- paste0("(", format(unlist(dfPercent)), "%)")
   # CONCATENATION of dfCount and dfPercent
   for (i in 1:ncol(dfCount)) {dfCount[[i]] <- paste(dfCount[[i]], dfPercent[[i]])}
   df1 <- data.frame(category = rownames(dfCount), dfCount, stringsAsFactors = FALSE)

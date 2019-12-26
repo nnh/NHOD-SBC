@@ -1,9 +1,9 @@
 ##################################################
 # Program : characteristics.R
 # Study : NHOD-SBC
-# Published : 2019/12/09
+# Published : 2019/12/26
 # Author : Kato Kiroku
-# Version : 19.12.09.000
+# Version : 19.12.26.000
 ##################################################
 
 library(openxlsx)
@@ -101,9 +101,12 @@ frequency_true("metaSITE_5", "その他")
 metasite <- rbind(metaSITE_1, metaSITE_2, metaSITE_3, metaSITE_4, metaSITE_5)
 metaYN <- rbind(metaYN[1:1,], metasite, metaYN[-(1:1),])
 
+frequency("DSDECOD", "DSDECOD", "完了,中止")
+cancel <- DSDECOD[, -1]
+write.csv(cancel, paste0(outpath, "/cancel.csv"), row.names = FALSE, na = "")
+
 characteristics <- rbind(AGE, CrohnYN, HNPCCYN, TNMCAT, PS, SBCSITE, SBCdegree, RASYN, metaYN, LDH, CEA, CA199)
 write.csv(characteristics, paste0(outpath, "/characteristics.csv"), row.names = FALSE, na = "")
-
 
 MultiplePrimaryCancers <- ptdata %>%
   select("SUBJID", "MHCOM") %>%
