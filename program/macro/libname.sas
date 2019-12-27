@@ -25,6 +25,9 @@ options fmtsearch=(libads);
 %let non_ope_chemo='治癒未切除・Chemotherapy群';
 %let non_ope_non_chemo='治癒未切除・non-Chemotherapy群';
 %let demog_group_count=5;
+%let regimens_adjuvant=%quote(%quote('UFT+LV/S-1', 'FOLFOX', 'CapeOX', %quote("5%'DFUR/capecitabine"), 'Other regimens'));
+%let regimens_first_line=%quote(%quote("FOLFOX/CapeOX/SOX"), %quote("FOLFOX+セツキシマブ"), %quote("FOLFOX+ベバシズマブ"), %quote("FOLFOX+パニツムマブ"), 
+                           'FOLFIRI', %quote("FOLFIRI+セツキシマブ"), %quote("FOLFIRI+ベバシズマブ"), %quote("FOLFIRI+パニツムマブ"), %quote("5FU+LV"), 'Other regimens');
 
 %macro INSERT_SQL(input_ds, output_ds, var_list, cond_str);
     /*  *** Functional argument *** 
@@ -389,7 +392,7 @@ options fmtsearch=(libads);
         template_rows : Output dataset rows
         select_str : Select statement text
         *** Example ***
-        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(B.ope_non_chemo_cnt label="治療なし"), 1);
+        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(B.ope_non_chemo_cnt label="治療なし"));
     */
     %local i delim_count temp_col temp_insert_str insert_str_delim_count;
     /* Count delimiters and get number of observations */

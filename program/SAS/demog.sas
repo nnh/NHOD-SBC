@@ -42,7 +42,7 @@ SAS version : 9.4
 %mend DEMOG_FREQ;
 
 %macro FREQ_METAYN;
-    %local i row_count item2-item4;
+    %local i row_count item2 item3 item4;
     %let item2='あり';
     %let item3='なし';
     %let item4='不明';
@@ -74,7 +74,7 @@ SAS version : 9.4
 %mend FREQ_METAYN;
 
 %macro FREQ_METASITE;
-    %local i temp_meta_1-temp_meta_5 row count;
+    %local i temp_meta_1 temp_meta_2 temp_meta_3 temp_meta_4 temp_meta_5 row count;
     %let temp_meta_1='　肝臓';
     %let temp_meta_2='　肺';
     %let temp_meta_3='　腹膜播種';
