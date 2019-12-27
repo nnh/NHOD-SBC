@@ -2,7 +2,7 @@
 Program Name : cancel.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-06-04
+Date : 2019-12-25
 SAS version : 9.4
 **************************************************************************;
 %macro INSERT_CANCEL(input_ds, output_ds, cond);
@@ -60,9 +60,13 @@ proc sql;
         reasons num label='íÜé~óùóR');
 quit;
 %EXEC_CANCEL;
+%JOIN_TO_TEMPLATE(ds_cancel, ds_cancel_join, 
+                    %quote(cancel char(6), ope_non_chemo num, ope_chemo num, non_ope_non_chemo num, non_ope_chemo num), 
+                    cancel, %quote('äÆóπó·', 'íÜé~ó·'), 
+                    %quote(B.ope_non_chemo label=&ope_non_chemo., B.ope_chemo label=&ope_chemo., B.non_ope_non_chemo label=&non_ope_non_chemo., B.non_ope_chemo label=&non_ope_chemo.));
 
-%ds2csv (data=ds_cancel, runmode=b, csvfile=&outpath.\ds_cancel.csv, labels=Y);
+%ds2csv (data=ds_cancel_join, runmode=b, csvfile=&outpath.\ds_cancel.csv, labels=Y);
 %ds2csv (data=ds_reasons_for_withdrawal, runmode=b, csvfile=&outpath.\ds_reasons_for_withdrawal.csv, labels=Y);
 
 * Delete the working dataset;
-proc datasets lib=work nolist; delete cancel temp_ds; run; quit;
+proc datasets lib=work nolist; delete cancel temp_ds template_ds ds_cancel; run; quit;

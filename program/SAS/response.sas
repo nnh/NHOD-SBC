@@ -100,6 +100,7 @@ data ds_ope_chemo ds_non_ope_chemo;
     if analysis_set=&non_ope_chemo. then output ds_non_ope_chemo;
 run;
 %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote(B.ope_non_chemo_cnt), %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), Ž¡—Ã‚È‚µ);
+
 proc sql;
     create table ds_res_2
     as select adjuvantCAT, RECISTORRES, count(*) as count from ds_ope_chemo group by adjuvantCAT, RECISTORRES;

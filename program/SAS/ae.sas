@@ -6,7 +6,13 @@ Date : 2019-12-24
 SAS version : 9.4
 **************************************************************************;
 %macro AE_EXEC(target_column, output_ds);
-    %local ds_output_ae varname_t i temp_varname temp_label max_index colname csvname;
+    /*  *** Functional argument *** 
+        target_column : Output target group
+        output_ds : Output dataset name
+        *** Example ***
+        %AE_EXEC(ope_chemo_cnt, ae_ope_chemo);
+    */
+    %local ds_output_ae varname_t i temp_varname temp_label max_index colname;
     %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,AE_DecreasNeut,AE_DecreasPLT,AE_Skin,AE_Anorexia,AE_HighBDPRES,AE_Prote";
     %let label_t="末梢性運動ニューロパチー,末梢性感覚ニューロパチー,下痢,好中球減少,血小板減少,皮膚障害,食欲不振,高血圧,蛋白尿";
     %let max_index = %sysfunc(countc(&varname_t., ','));
@@ -14,8 +20,7 @@ SAS version : 9.4
     %do i = 1 %to &max_index.; 
         %let temp_varname=%scan(&varname_t., &i., ",");
         %let temp_label=%scan(&label_t., &i., ",");
-        %let csvname=%sysfunc(cat(&output_ds., .csv));
-        %SET_FREQ(temp_ae, '治療による有害事象', &temp_varname._grd, %str(&target_column.), &csvname.);
+        %SET_FREQ(temp_ae, '治療による有害事象', &temp_varname._grd, %str(&target_column.), .);
         /* Remove unnecessary space in items */
         data ae_&i.;
             set temp_ae(rename=(items=temp_items));
@@ -25,7 +30,7 @@ SAS version : 9.4
         /* Form a AE table */
         %let colname=B.&target_column.;
         %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, %quote(items char(1), &target_column. num), items, %quote(&colname.), %quote('1', '2', '3', '4'), &temp_label.);
-        %if &i.=1 %then %do;
+        %if &i. = 1 %then %do;
             data join_ae;
                 set temp_join_ae(rename=(&target_column.=&target_column.&i.));
             run;

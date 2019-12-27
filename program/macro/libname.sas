@@ -363,7 +363,8 @@ options fmtsearch=(libads);
         str_label : Title
         var : Target variable name of input data set
         str_keep : Variables to leave in the output data set
-        csv_name : csv name
+        csv_name : csv name, if this value is NA, do not output csv
+        csv_output_f : 1:output csv, otherwise:do not output csv
         *** Example ***
         %SET_FREQ(ds_surgical_curability, 'éËèpÇÃç™é°ìx', resectionCAT, %str(ope_non_chemo_cnt ope_non_chemo_per ope_chemo_cnt ope_chemo_per), surgical_curability.csv);
     */
@@ -375,36 +376,42 @@ options fmtsearch=(libads);
         if _N_=1 then title=&str_label;
         keep title items &str_keep.;
     run;
-    %ds2csv (data=&output_ds_name., runmode=b, csvfile=&outpath.\&csv_name., labels=Y);
+    %if &csv_name. ^= . %then %do;
+        %ds2csv (data=&output_ds_name., runmode=b, csvfile=&outpath.\&csv_name., labels=Y);
+    %end;
 %mend SET_FREQ;
-%macro JOIN_TO_TEMPLATE(input_ds, output_ds, output_cols, join_key_colname, input_cols, template_rows, input_col_label);
+%macro JOIN_TO_TEMPLATE(input_ds, output_ds, output_cols, join_key_colname, template_rows, select_str);
     /*  *** Functional argument ***  
         input_ds : Input dataset
         output_ds : Output dataset
         output_cols : Output dataset columns
         join_key_colname : Left join key
-        input_cols : Input dataset columns
         template_rows : Output dataset rows
-        input_col_label : Column label
+        select_str : Select statement text
         *** Example ***
-        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote(B.ope_non_chemo_cnt), %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), é°ó√Ç»Çµ);
+        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(B.ope_non_chemo_cnt label="é°ó√Ç»Çµ"), 1);
     */
-    %local i delim_count temp_col;
+    %local i delim_count temp_col temp_insert_str insert_str_delim_count;
     /* Count delimiters and get number of observations */
-    %let delim_count = %sysfunc(count(&template_rows, %quote(,)));
+    %let delim_count = %sysfunc(count(&template_rows., %quote(,)));
+    %let insert_str_delim_count = %sysfunc(count(&select_str., %quote(,)));
+    data _NULL_;
+        call symput('temp_insert_str', repeat(".,", &insert_str_delim_count.));
+    run;
     /* Create an observation for the argument output_cols in the template dataset and add the variable seq for sorting */
     proc sql noprint;
         create table template_ds
             (&output_cols., seq num);
         %do i = 1 %to %eval(&delim_count.+1);
             %let temp_col=%sysfunc(scan(&template_rows, &i., %quote(,)));
-            insert into template_ds values(&temp_col., ., &i.);
+            *insert into template_ds values(&temp_col., ., &i.);
+            insert into template_ds values(&temp_col., &temp_insert_str. &i.);
         %end;
     quit;
     /* Merge template dataset and input dataset and sort in seq order */
     proc sql noprint;
         create table &output_ds. as
-            select A.seq, A.&join_key_colname., &input_cols. label="&input_col_label." from template_ds A left join &input_ds. B on A.&join_key_colname. = B.&join_key_colname. order by seq;
+            select A.seq, A.&join_key_colname., &select_str. from template_ds A left join &input_ds. B on A.&join_key_colname. = B.&join_key_colname. order by seq;
     quit;
     /* Delete variable seq */
     proc sql noprint;
@@ -413,3 +420,4 @@ options fmtsearch=(libads);
 %mend JOIN_TO_TEMPLATE;
 
 %inc "&projectpath.\program\macro\libfunction.sas";
+

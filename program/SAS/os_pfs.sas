@@ -2,10 +2,18 @@
 Program Name : os_pfs.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-06-19
+Date : 2020-x-x
 SAS version : 9.4
 **************************************************************************;
 %macro OS_FUNC(input_ds, output_filename, group_var, input_years);
+    /*  *** Functional argument *** 
+        input_ds : Dataset for lifetest 
+        output_filename : Output file name
+        group_var : Group variable
+        input_years : Time variable
+        *** Example ***
+        %OS_FUNC(ds_os, os_1, analysis_group, os_years);
+    */
     ods graphics /reset=index;
     ods listing close;
         ods rtf file="&outpath.\&output_filename..rtf";
@@ -76,11 +84,12 @@ SAS version : 9.4
 * 5.5.1. OS;
 data ds_os ds_ope_os ds_non_ope_os;
     set ptdata;
-    if DTHFL=1 then do;
+    /* 1:death */
+    if DTHFL = 1 then do;
         os_day=getDays(DIGDTC, DTHDTC);
         censor=0;
     end;
-    if DTHFL ne 1 then do;
+    else do;
         os_day=getDays(DIGDTC, SURVDTC);
         censor=1;
     end;
@@ -99,14 +108,18 @@ run;
 %OS_FUNC(ds_ope_os, os_2, analysis_set, os_years);
 %OS_FUNC(ds_non_ope_os, os_3, analysis_set, os_years);
 
+* Kaplan-Meier法による年次の生存率;
+
 * Annual survival rate, event;
 %CREATE_OUTPUT_DS(output_ds=ds_death, items_label='イベント');
 proc contents data=ds_death out=ds_colnames varnum noprint; run;
 %FREQ_FUNC(cat_var=analysis_set, var_var=DTHFL, output_ds=ds_death);
 data ds_death;
     set ds_death;
-    where items='1';
-    if _N_=1 then title='死亡';
+    where items ^= "";
+    if items = 1 then title = '死亡';
+    else title = 'n';
+    keep title ope_non_chemo_cnt ope_chemo_cnt non_ope_non_chemo_cnt non_ope_chemo_cnt;
 run;
 
 * 5.5.2 PFS
