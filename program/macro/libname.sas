@@ -229,22 +229,26 @@ options fmtsearch=(libads);
     /* Execute FREQ procedure */
     %EXEC_FREQ(&input_ds., &var_var., temp_all_ds);
     %EDIT_DS_ALL;
-    /* Calculate the percentage of each group */
     %EXEC_FREQ(&input_ds., %str(&cat_var.*&var_var.), temp_freq);
+    /* Calculate the percentage of each group */
+    data temp_freq_all;
+        set temp_all_ds temp_freq;
+    run;
 
     proc sql noprint;
         create table temp_sum as
-            select &cat_var., sum(COUNT) as group_sum from temp_freq group by &cat_var.;  
+            select &cat_var., sum(COUNT) as group_sum from temp_freq_all group by &cat_var.;  
     quit;
     proc sql noprint;
         create table temp_sum_var as
-            select A.*, B.group_sum from temp_freq A inner join temp_sum B on A.&cat_var. = B.&cat_var.;
+            select A.*, B.group_sum from temp_freq_all A inner join temp_sum B on A.&cat_var. = B.&cat_var.;
     quit;
     data temp_ds;
         set temp_sum_var (rename=(PERCENT=temp_per));
         PERCENT=round(COUNT / group_sum * 100, 0.1);
         drop temp_per group_sum;
     run;
+
     /* Get variable format */
     %GET_CONTENTS(ptdata_contents, "&var_var.", format);
     %if &temp_return_contents ne '' %then %do;
@@ -259,8 +263,7 @@ options fmtsearch=(libads);
     %end;
 
     data temp_ds;
-        set temp_all_ds temp_ds;
-        temp_per=round(percent, 0.1);
+        set temp_ds;
         %if &format_f.=1 %then %do;
             /* Convert format to string */
             %let dsid=%sysfunc(open(temp_ds, i));
@@ -275,8 +278,7 @@ options fmtsearch=(libads);
             retain items;
             items=&var_var.;
         %end;
-        drop percent &var_var.;
-        rename temp_per=percent;
+        drop &var_var.;
     run;
 
     /* Split the dataset */
