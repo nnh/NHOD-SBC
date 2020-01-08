@@ -152,4 +152,3 @@ proc datasets lib=work nolist;
            temp_freq temp_metasite_1-temp_metasite_5; 
     run;
 quit;
-

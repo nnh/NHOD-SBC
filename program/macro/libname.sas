@@ -224,12 +224,27 @@ options fmtsearch=(libads);
         *** Example ***
         %FREQ_FUNC(title='ÉNÉçÅ[Éìïa', var_var=CrohnYN);
     */
-    %local format_f temp_len i;
+    %local format_f temp_len i cat_list delim_count temp cat;
     %let format_f=.;
     /* Execute FREQ procedure */
     %EXEC_FREQ(&input_ds., &var_var., temp_all_ds);
     %EDIT_DS_ALL;
-    %EXEC_FREQ(&input_ds., %str(&cat_var.*&var_var.), temp_ds);
+    /* Calculate the percentage of each group */
+    %EXEC_FREQ(&input_ds., %str(&cat_var.*&var_var.), temp_freq);
+
+    proc sql noprint;
+        create table temp_sum as
+            select &cat_var., sum(COUNT) as group_sum from temp_freq group by &cat_var.;  
+    quit;
+    proc sql noprint;
+        create table temp_sum_var as
+            select A.*, B.group_sum from temp_freq A inner join temp_sum B on A.&cat_var. = B.&cat_var.;
+    quit;
+    data temp_ds;
+        set temp_sum_var (rename=(PERCENT=temp_per));
+        PERCENT=round(COUNT / group_sum * 100, 0.1);
+        drop temp_per group_sum;
+    run;
     /* Get variable format */
     %GET_CONTENTS(ptdata_contents, "&var_var.", format);
     %if &temp_return_contents ne '' %then %do;
@@ -300,7 +315,7 @@ options fmtsearch=(libads);
     run;
 
     /* Delete the working dataset */
-    proc datasets lib=work nolist; delete temp1-temp&demog_group_count. temp_ds temp_all_ds temp_output; run; quit;
+/*    proc datasets lib=work nolist; delete temp1-temp&demog_group_count. temp_ds temp_all_ds temp_output; run; quit;*/
 
 %mend FREQ_FUNC;
 
