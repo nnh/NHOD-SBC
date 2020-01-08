@@ -2,7 +2,7 @@
 Program Name : ae.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-12-24
+Date : 2020-01-08
 SAS version : 9.4
 **************************************************************************;
 %macro AE_EXEC(target_column, output_ds);
@@ -29,7 +29,7 @@ SAS version : 9.4
         run;
         /* Form a AE table */
         %let colname=B.&target_column.;
-        %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, %quote(items char(1), &target_column. num), items, %quote(&colname.), %quote('1', '2', '3', '4'), &temp_label.);
+        %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, %quote(items char(1), &target_column. num), items, %quote('1', '2', '3', '4'), %quote(&colname. label="&temp_label."));
         %if &i. = 1 %then %do;
             data join_ae;
                 set temp_join_ae(rename=(&target_column.=&target_column.&i.));

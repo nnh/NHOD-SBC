@@ -2,7 +2,7 @@
 Program Name : tumor_reduction.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-06-25
+Date : 2020-01-08
 SAS version : 9.4
 **************************************************************************;
 %macro TUMOR_REDUCTION_EXEC;
@@ -31,7 +31,5 @@ SAS version : 9.4
         set temp_tumor;
         if _N_=1 then delete;
     run;
-    * Delete the working dataset;
-    *proc datasets lib=work nolist; save &ds_output_tumor.; quit;
 %mend TUMOR_REDUCTION_EXEC;
 %TUMOR_REDUCTION_EXEC;

@@ -2,32 +2,90 @@
 Program Name : os_pfs.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-x-x
+Date : 2020-1-7
 SAS version : 9.4
 **************************************************************************;
-%macro OS_FUNC(input_ds, output_filename, group_var, input_years);
+%macro OS_FUNC(input_ds, output_filename, group_var, input_years, p_value=0.05);
     /*  *** Functional argument *** 
         input_ds : Dataset for lifetest 
         output_filename : Output file name
         group_var : Group variable
         input_years : Time variable
+        p_value : p value
         *** Example ***
         %OS_FUNC(ds_os, os_1, analysis_group, os_years);
     */
+    %local temp_group group delim_count output_survrate;
+    %let output_survrate=&output_filename._survrate;
     ods graphics /reset=index;
     ods listing close;
         ods rtf file="&outpath.\&output_filename..rtf";
             ods noptitle;
-            ods select survivalplot HomTests;
-            proc lifetest  
-                data=&input_ds. 
-                stderr 
-                outsurv=os 
-                alpha=0.05 
-                plot=survival;
-                strata &group_var.;
-                time &input_years.*censor(1);
-            run;
+            %if &group_var.=. %then %do;
+                ods select survivalplot;
+                proc lifetest 
+                    data=&input_ds. stderr outsurv=os alpha=&p_value. plot=survival;
+                    time &input_years.*censor(1);
+                run;
+            %end;
+            %else %do;
+                ods select survivalplot HomTests;
+                proc lifetest  
+                    data=&input_ds. stderr outsurv=os alpha=&p_value. plot=survival;
+                    strata &group_var.;
+                    time &input_years.*censor(1);
+                run;
+            %end;
+        ods rtf close;
+    ods listing;
+    ods graphics /reset=all;
+    /* Annual survival rate */
+    ods graphics /reset=index;
+    ods listing close;
+        ods rtf file="&outpath.\temp.rtf";
+            %if &group_var.=. %then %do;
+                proc lifetest 
+                    data=&input_ds. outsurv=temp_survrate noprint alpha=&p_value. timelist=1 2 3 reduceout;
+                    time &input_years.*censor(1);
+                run;
+            %end;
+            %else %do;
+                proc lifetest 
+                    data=&input_ds. outsurv=temp_survrate noprint alpha=&p_value. timelist=1 2 3 reduceout;
+                    strata &group_var.;
+                    time &input_years.*censor(1);
+                run;
+                proc sql noprint;
+                    select distinct &group_var. into: temp_group separated by ',' from temp_survrate;
+                quit;
+                %let delim_count = %sysfunc(count("&temp_group.", %quote(,)));
+                %do i = 1 %to %eval(&delim_count.+1);    
+                    %let group=%sysfunc(scan(%quote(&temp_group.), &i., %quote(,)));
+                    data temp;
+                        set temp_survrate;
+                        where &group_var.="&group.";
+                        label SURVIVAL="&group.";
+                        keep TIMELIST SURVIVAL SDF_LCL SDF_UCL;
+                        rename SURVIVAL=SURVIVAL&i. SDF_LCL=SDF_LCL&i. SDF_UCL=SDF_UCL&i.;
+                    run;
+                    %if &i.=1 %then %do;
+                        data &output_survrate.;
+                            set temp;
+                        run;
+                    %end;
+                    %else %do;
+                        data temp_output_ds;
+                            set &output_survrate.;
+                        run;
+                        proc delete data=&output_survrate.;
+                        run;
+                        proc sql noprint;
+                            create table &output_survrate. as
+                            select A.*, B.SURVIVAL&i., B.SDF_LCL&i., B.SDF_UCL&i. from temp_output_ds A inner join temp B on A.TIMELIST = B.TIMELIST;
+                        quit;
+                    %end;
+                %end;
+            %end;
         ods rtf close;
     ods listing;
     ods graphics /reset=all;
@@ -36,6 +94,11 @@ SAS version : 9.4
         outfile="&outpath.\&output_filename..csv"
         dbms=csv replace;
     run;
+    proc export data=&output_survrate.
+        outfile="&outpath.\&output_survrate..csv"
+        dbms=csv replace;
+    run;
+
 %mend OS_FUNC;
 
 %macro EDIT_DS_PFS;
@@ -108,9 +171,7 @@ run;
 %OS_FUNC(ds_ope_os, os_2, analysis_set, os_years);
 %OS_FUNC(ds_non_ope_os, os_3, analysis_set, os_years);
 
-* Kaplan-Meier法による年次の生存率;
-
-* Annual survival rate, event;
+* event;
 %CREATE_OUTPUT_DS(output_ds=ds_death, items_label='イベント');
 proc contents data=ds_death out=ds_colnames varnum noprint; run;
 %FREQ_FUNC(cat_var=analysis_set, var_var=DTHFL, output_ds=ds_death);
@@ -121,13 +182,15 @@ data ds_death;
     else title = 'n';
     keep title ope_non_chemo_cnt ope_chemo_cnt non_ope_non_chemo_cnt non_ope_chemo_cnt;
 run;
+%ds2csv (data=ds_death, runmode=b, csvfile=&outpath.\os_event.csv, labels=Y);
 
-* 5.5.2 PFS
+* 5.5.2 PFS;
 %EDIT_DS_PFS;
 %OS_FUNC(ds_pfs, pfs_1, analysis_group, pfs_years);
 %OS_FUNC(ds_ope_pfs, pfs_2, analysis_set, pfs_years);
-%OS_FUNC(ds_non_ope_chemo_pfs, pfs_3, analysis_set, pfs_years);
-* event ;
+%OS_FUNC(ds_non_ope_chemo_pfs, pfs_3, ., pfs_years);
+
+* event;
 %CREATE_OUTPUT_DS(output_ds=ds_exacerbation, items_label='イベント');
 proc contents data=ds_exacerbation out=ds_colnames varnum noprint; run;
 %FREQ_FUNC(cat_var=analysis_set, var_var=RECURRYN, output_ds=ds_exacerbation);
@@ -135,8 +198,10 @@ data ds_exacerbation;
     set ds_exacerbation;
     where items='あり';
     if _N_=1 then title='増悪・再発';
+    keep title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt;
 run;
 
 data ds_pfs_event;
-    set ds_death ds_exacerbation;
+    set ds_death(keep=title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt) ds_exacerbation;
 run;
+%ds2csv (data=ds_pfs_event, runmode=b, csvfile=&outpath.\pfs_event.csv, labels=Y);

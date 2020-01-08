@@ -2,7 +2,7 @@
 Program Name : response.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-12-23
+Date : 2020-1-8
 SAS version : 9.4
 **************************************************************************;
 * 5.5.3. Response rate of treatment;
@@ -72,7 +72,7 @@ SAS version : 9.4
             items=put(temp_items, &format_length..);
         run;
         %let colname=B.&temp_colname.;
-        %JOIN_TO_TEMPLATE(regimen_ds, temp_join_regimen, %quote(items char(2), count num), items, %quote(&colname.), %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), &temp_regimen.);
+        %JOIN_TO_TEMPLATE(regimen_ds, temp_join_regimen, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(&colname. label="&temp_regimen."));
         %if &i.=1 %then %do;
             data &output_ds.;
                 set temp_join_regimen;
@@ -99,7 +99,7 @@ data ds_ope_chemo ds_non_ope_chemo;
     if analysis_set=&ope_chemo. then output ds_ope_chemo;
     if analysis_set=&non_ope_chemo. then output ds_non_ope_chemo;
 run;
-%JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote(B.ope_non_chemo_cnt), %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), Ž¡—Ã‚È‚µ);
+%JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(B.ope_non_chemo_cnt label="Ž¡—Ã‚È‚µ"));
 
 proc sql;
     create table ds_res_2
