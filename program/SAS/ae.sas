@@ -2,7 +2,7 @@
 Program Name : ae.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-08
+Date : 2020-01-10
 SAS version : 9.4
 **************************************************************************;
 %macro AE_EXEC(target_column, output_ds);
@@ -13,14 +13,16 @@ SAS version : 9.4
         %AE_EXEC(ope_chemo_cnt, ae_ope_chemo);
     */
     %local ds_output_ae varname_t i temp_varname temp_label max_index colname;
-    %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,AE_DecreasNeut,AE_DecreasPLT,AE_Skin,AE_Anorexia,AE_HighBDPRES,AE_Prote";
-    %let label_t="末梢性運動ニューロパチー,末梢性感覚ニューロパチー,下痢,好中球減少,血小板減少,皮膚障害,食欲不振,高血圧,蛋白尿";
+    %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,AE_DecreasNeut,
+                    AE_DecreasPLT,AE_Skin,AE_Anorexia,AE_HighBDPRES,AE_Prote";
+    %let label_t="末梢性運動ニューロパチー,末梢性感覚ニューロパチー,下痢,好中球減少,
+                  血小板減少,皮膚障害,食欲不振,高血圧,蛋白尿";
     %let max_index = %sysfunc(countc(&varname_t., ','));
     %let max_index = %eval(&max_index. + 1);
     %do i = 1 %to &max_index.; 
         %let temp_varname=%scan(&varname_t., &i., ",");
         %let temp_label=%scan(&label_t., &i., ",");
-        %SET_FREQ(temp_ae, '治療による有害事象', &temp_varname._grd, %str(&target_column.), .);
+        %SET_FREQ(temp_ae, '治療による有害事象', &temp_varname._grd, %str(&target_column.));
         /* Remove unnecessary space in items */
         data ae_&i.;
             set temp_ae(rename=(items=temp_items));
@@ -29,7 +31,11 @@ SAS version : 9.4
         run;
         /* Form a AE table */
         %let colname=B.&target_column.;
-        %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, %quote(items char(1), &target_column. num), items, %quote('1', '2', '3', '4'), %quote(&colname. label="&temp_label."));
+        %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, 
+                            %quote(items char(1), &target_column. num), 
+                            items, 
+                            %quote('1', '2', '3', '4'), 
+                            %quote(&colname. label="&temp_label."));
         %if &i. = 1 %then %do;
             data join_ae;
                 set temp_join_ae(rename=(&target_column.=&target_column.&i.));
@@ -43,7 +49,8 @@ SAS version : 9.4
             run;
             proc sql noprint;
                 create table join_ae as
-                    select A.*, &colname. as &target_column.&i. from temp_output_ds A inner join temp_join_ae B on A.items = B.items;
+                    select A.*, &colname. as &target_column.&i. 
+                    from temp_output_ds A inner join temp_join_ae B on A.items = B.items;
             quit;
         %end;
     %end;
@@ -54,8 +61,14 @@ SAS version : 9.4
     run;
     data &output_ds.;
         set &output_ds.(rename=(_LABEL_=ae));
+        label ae='grade';
         drop _NAME_;
     run;
+    %ds2csv (data=&output_ds., runmode=b, csvfile=&outpath.\_5_6_1_&output_ds..csv, labels=Y);
+
+    * Delete the working dataset;
+    proc datasets lib=work nolist; delete ae_1-ae_&max_index. temp_join_ae temp_ae; run; quit;
+
 %mend AE_EXEC;
 %AE_EXEC(ope_chemo_cnt, ae_ope_chemo);
 %AE_EXEC(non_ope_chemo_cnt, ae_non_ope_chemo);

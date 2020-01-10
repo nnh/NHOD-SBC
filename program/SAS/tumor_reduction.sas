@@ -2,12 +2,12 @@
 Program Name : tumor_reduction.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-08
+Date : 2020-01-10
 SAS version : 9.4
 **************************************************************************;
 %macro TUMOR_REDUCTION_EXEC;
     %local ds_output_tumor varname_t label_t i temp_varname temp_label;
-    %let ds_output_tumor=ds_tumor_reduction;
+    %let ds_output_tumor=_5_5_4_ds_tumor_reduction;
     %let varname_t="SBCsum,Lesion3m,Lesion6m";
     %let label_t="ベースライン,3ヵ月,6ヵ月";
     %CREATE_OUTPUT_DS(output_ds=&ds_output_tumor., items_label='腫瘍の縮小率');
@@ -31,5 +31,8 @@ SAS version : 9.4
         set temp_tumor;
         if _N_=1 then delete;
     run;
+    %ds2csv (data=&ds_output_tumor., runmode=b, csvfile=&outpath.\&ds_output_tumor..csv, labels=Y);
+    * Delete the working dataset;
+    proc datasets lib=work nolist; delete temp_1-temp_3 temp_tumor; run; quit;
 %mend TUMOR_REDUCTION_EXEC;
 %TUMOR_REDUCTION_EXEC;
