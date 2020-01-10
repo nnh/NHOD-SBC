@@ -135,7 +135,7 @@ options noquotelenmax;
 %MEANS_FUNC(title='CEA', var_var=CEA_num);
 %TO_NUM_TEST_RESULTS(var=CA199);
 %MEANS_FUNC(title='CA199', var_var=CA199_num);
-%ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\demog.csv, labels=Y);
+%ds2csv (data=ds_demog, runmode=b, csvfile=&outpath.\_5_3_demog.csv, labels=Y);
 * Multiple primary cancers;
 data ds_multiple_primary_cancers;
     format subjid best12.;
@@ -144,7 +144,7 @@ data ds_multiple_primary_cancers;
     subjid = id;
     keep subjid MHCOM;
 run;
-%ds2csv (data=ds_multiple_primary_cancers, runmode=b, csvfile=&outpath.\multiple_primary_cancers.csv, labels=Y);
+%ds2csv (data=ds_multiple_primary_cancers, runmode=b, csvfile=&outpath.\_5_3_multiple_primary_cancers.csv, labels=Y);
 
 * Delete the working dataset;
 proc datasets lib=work nolist; 

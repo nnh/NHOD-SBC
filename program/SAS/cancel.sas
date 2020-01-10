@@ -65,8 +65,8 @@ quit;
                     cancel, %quote('Š®—¹—á', '’†Ž~—á'), 
                     %quote(B.ope_non_chemo label=&ope_non_chemo., B.ope_chemo label=&ope_chemo., B.non_ope_non_chemo label=&non_ope_non_chemo., B.non_ope_chemo label=&non_ope_chemo.));
 
-%ds2csv (data=ds_cancel_join, runmode=b, csvfile=&outpath.\ds_cancel.csv, labels=Y);
-%ds2csv (data=ds_reasons_for_withdrawal, runmode=b, csvfile=&outpath.\ds_reasons_for_withdrawal.csv, labels=Y);
+%ds2csv (data=ds_cancel_join, runmode=b, csvfile=&outpath.\_5_2_cancel.csv, labels=Y);
+%ds2csv (data=ds_reasons_for_withdrawal, runmode=b, csvfile=&outpath.\_5_2_reasons_for_withdrawal.csv, labels=Y);
 
 * Delete the working dataset;
 proc datasets lib=work nolist; delete cancel temp_ds template_ds ds_cancel; run; quit;

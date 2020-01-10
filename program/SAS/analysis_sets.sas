@@ -2,7 +2,7 @@
 Program Name : analysis_sets.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-05-30
+Date : 2020-01-09
 SAS version : 9.4
 **************************************************************************;
 * Load analysis target group from EXCEL file;
@@ -34,8 +34,8 @@ run;
 proc sort data=saihi; by subjid; run;
 
 data _NULL_;
-	put '[close(false)]';
-	put '[quit()]';
+    put '[close(false)]';
+    put '[quit()]';
 run;
 
 * Load ptdata and merge with analysis target group information;
@@ -87,7 +87,7 @@ run;
 %INSERT_SQL(analysis, ds_N, %str('', &non_ope_chemo., count, percent), %str(analysis=)&non_ope_chemo.);
 %INSERT_SQL(analysis, ds_N, %str('', &non_ope_non_chemo., count, percent), %str(analysis=)&non_ope_non_chemo.);
 
-%ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\N.csv, labels=N);
+%ds2csv (data=ds_N, runmode=b, csvfile=&outpath.\_5_1_n.csv, labels=N);
 
 * Delete the working dataset;
 proc datasets lib=work nolist; save ptdata ds_n ptdata_contents; quit;

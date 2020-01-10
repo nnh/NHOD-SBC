@@ -2,7 +2,7 @@
 Program Name : main.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-12-12
+Date : 2020-01-09
 SAS version : 9.4
 *******************************************************/
 * Define constants;
@@ -35,7 +35,7 @@ SAS version : 9.4
 %mend GET_DIRECTORY_PATH;
 %let thisfile=%GET_THISFILE_FULLPATH;
 %let projectpath=%GET_DIRECTORY_PATH(&thisfile., 3);
-%inc "&projectpath.\program\macro\libname.sas";
+%inc "&projectpath.\program\SAS\macro\libname.sas";
 
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\analysis_sets.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\cancel.sas";

@@ -93,13 +93,19 @@ SAS version : 9.4
 
 %mend EDIT_RESPONSE;
 
-%SET_FREQ(ds_res_1, 'é°ó√ÇÃëtå¯äÑçá', RECISTORRES, %str(ope_non_chemo_cnt), response_ope_no_chemo.csv);
+%SET_FREQ(ds_res_1, 'é°ó√ÇÃëtå¯äÑçá', RECISTORRES, %str(ope_non_chemo_cnt ope_non_chemo_per));
+
 data ds_ope_chemo ds_non_ope_chemo;
     set ptdata;
     if analysis_set=&ope_chemo. then output ds_ope_chemo;
     if analysis_set=&non_ope_chemo. then output ds_non_ope_chemo;
 run;
-%JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(B.ope_non_chemo_cnt label="é°ó√Ç»Çµ"));
+%JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, 
+                    %quote(items char(2), count num, per num), 
+                    items, 
+                    %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), 
+                    %quote(B.ope_non_chemo_cnt label="é°ó√Ç»Çµ", B.ope_non_chemo_per label='(%)'));
+%ds2csv (data=response_ope_non_chemo, runmode=b, csvfile=&outpath.\_5_5_3_response_ope_no_chemo.csv, labels=Y);
 
 proc sql;
     create table ds_res_2
