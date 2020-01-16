@@ -2,12 +2,57 @@
 Program Name : analysis_sets.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-09
+Date : 2020-01-15
 SAS version : 9.4
 **************************************************************************;
 * Load analysis target group from EXCEL file;
 options noxwait noxsync;
 %sysexec "&projectpath.\document\&saihi_input.";
+%macro EDIT_DS_SEX();
+    %local raw_path dir_raw raw_registration;
+    %let raw_path="&projectpath.\input\rawdata";
+    filename dir_raw &raw_path.;
+    data temp_rawdata_filename; 
+       length var $400;
+       * Open directory;
+       did = dopen("dir_raw");
+       * set file names in variables;
+       do i = 1 to dnum(did);
+           var = dread(did, i);
+           output ;
+       end;
+       rc = dclose(did) ;
+    run;
+    * Set the csv name of registration;
+    data _NULL_;
+        set temp_rawdata_filename;
+        if PRXMATCH('/SBC_registration_/',var)=1 then do;
+            call symput('raw_registration', compress(var));
+        end;
+    run;
+    proc import 
+        datafile="&projectpath.\input\rawdata\&raw_registration."
+        out=temp_registration
+        dbms=csv replace;
+        getnames=yes;
+        guessingrows=999;
+    run;
+    proc format library=libads;
+        value $FMT_SEX
+            0="íjê´"
+            1="èóê´";
+    run;
+    data ds_registration;
+        set temp_registration;
+        subjid=input(VAR9, best12.);
+        format field9 FMT_SEX.;
+        keep subjid field9;
+        rename field9=sex;
+    run;
+    * Delete the working dataset;
+    proc datasets lib=work nolist; delete temp_rawdata_filename temp_registration; run; quit;
+%mend EDIT_DS_SEX;
+
 data _NULL_;
   rc = sleep(5);
 run;
@@ -47,6 +92,12 @@ data ptdata;
 run;
 data ptdata;
     merge ptdata saihi;
+    by subjid;
+run;
+* Merge sex;
+%EDIT_DS_SEX;
+data ptdata;
+    merge ptdata ds_registration;
     by subjid;
 run;
 

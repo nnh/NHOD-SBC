@@ -121,6 +121,7 @@ SAS version : 9.4
 options noquotelenmax; 
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
 %MEANS_FUNC(title='年齢', var_var=AGE);
+%DEMOG_FREQ(sex, %quote('男性', '女性'), '性別');
 %DEMOG_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
 %DEMOG_FREQ(HNPCCYN, %quote('あり', 'なし', '不明'), 'HNPCC');
 %DEMOG_FREQ(TNMCAT, %quote('I', 'II', 'III', 'IV'), 'TNM分類');

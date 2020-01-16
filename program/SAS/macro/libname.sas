@@ -9,7 +9,7 @@ SAS version : 9.4
 proc datasets library=work kill nolist; quit;
 
 options mprint mlogic symbolgen minoperator noautocorrect;
-libname libads "&projectpath.\ptosh-format\ads" access=readonly;
+libname libads "&projectpath.\ptosh-format\ads";
 options fmtsearch=(libads);
 * Path;
 %let extpath=&projectpath.\input\ext;
