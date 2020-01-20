@@ -48,6 +48,8 @@ SAS version : 9.4
                     data=&input_ds. outsurv=temp_survrate noprint alpha=&p_value. timelist=1 2 3 reduceout;
                     time &input_years.*censor(1);
                 run;
+                %let delim_count=0;
+                %let temp_group=.;
             %end;
             %else %do;
                 proc lifetest 
@@ -59,8 +61,18 @@ SAS version : 9.4
                     select distinct &group_var. into: temp_group separated by ',' from temp_survrate;
                 quit;
                 %let delim_count = %sysfunc(count("&temp_group.", %quote(,)));
-                %do i = 1 %to %eval(&delim_count.+1);    
-                    %let group=%sysfunc(scan(%quote(&temp_group.), &i., %quote(,)));
+            %end;
+            %do i = 1 %to %eval(&delim_count.+1);    
+                %let group=%sysfunc(scan(%quote(&temp_group.), &i., %quote(,)));
+                %if &group_var.=. %then %do;
+                    data temp;
+                        set temp_survrate;
+                        label SURVIVAL=&non_ope_chemo.;
+                        keep TIMELIST SURVIVAL SDF_LCL SDF_UCL;
+                        rename SURVIVAL=SURVIVAL&i. SDF_LCL=SDF_LCL&i. SDF_UCL=SDF_UCL&i.;
+                    run;
+                %end;
+                %else %do;
                     data temp;
                         set temp_survrate;
                         where &group_var.="&group.";
@@ -68,22 +80,22 @@ SAS version : 9.4
                         keep TIMELIST SURVIVAL SDF_LCL SDF_UCL;
                         rename SURVIVAL=SURVIVAL&i. SDF_LCL=SDF_LCL&i. SDF_UCL=SDF_UCL&i.;
                     run;
-                    %if &i.=1 %then %do;
-                        data &output_survrate.;
-                            set temp;
-                        run;
-                    %end;
-                    %else %do;
-                        data temp_output_ds;
-                            set &output_survrate.;
-                        run;
-                        proc delete data=&output_survrate.;
-                        run;
-                        proc sql noprint;
-                            create table &output_survrate. as
+                %end;
+                %if &i.=1 %then %do;
+                    data &output_survrate.;
+                        set temp;
+                    run;
+                %end;
+                %else %do;
+                    data temp_output_ds;
+                        set &output_survrate.;
+                    run;
+                    proc delete data=&output_survrate.;
+                    run;
+                    proc sql noprint;
+                        create table &output_survrate. as
                             select A.*, B.SURVIVAL&i., B.SDF_LCL&i., B.SDF_UCL&i. from temp_output_ds A inner join temp B on A.TIMELIST = B.TIMELIST;
-                        quit;
-                    %end;
+                    quit;
                 %end;
             %end;
         ods rtf close;
@@ -92,12 +104,14 @@ SAS version : 9.4
     %if %sysfunc(exist(os)) %then %do;
         proc export data=os
             outfile="&outpath.\&output_filename..csv"
+            label
             dbms=csv replace;
         run;
     %end;  
     %if %sysfunc(exist(&output_survrate.)) %then %do;
       proc export data=&output_survrate.
           outfile="&outpath.\&output_survrate..csv"
+          label
           dbms=csv replace;
       run;
     %end;  
