@@ -2,45 +2,9 @@
 Program Name : demog.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2019-12-27
+Date : 2020-01-20
 SAS version : 9.4
 **************************************************************************;
-%macro DEMOG_FREQ(var, item_list, title);
-    /*  *** Functional argument *** 
-        var : Target variable
-        item_list : Output these to items
-        title : Output it to title
-        *** Example ***
-        %DEMOG_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
-    */
-    %local output_cols select_str;
-    %let output_cols=%quote(items char(100), all_cnt num, all_per num, ope_non_chemo_cnt num, ope_chemo_cnt num, non_ope_non_chemo_cnt num, non_ope_chemo_cnt num, ope_non_chemo_per num, ope_chemo_per num, non_ope_non_chemo_per num, non_ope_chemo_per num);
-    %let select_str=%quote(B.all_cnt label=&all_group., B.all_per label=&all_group., B.ope_non_chemo_cnt label=&ope_non_chemo., B.ope_non_chemo_per label=&ope_non_chemo., B.ope_chemo_cnt label=&ope_chemo., B.ope_chemo_per label=&ope_chemo., B.non_ope_non_chemo_cnt label=&non_ope_non_chemo., B.non_ope_non_chemo_per label=&non_ope_non_chemo.,  B.non_ope_chemo_cnt label=&non_ope_chemo., B.non_ope_chemo_per label=&non_ope_non_chemo.);
-    %CREATE_OUTPUT_DS(output_ds=temp_freq, items_label=&title.);
-    %FREQ_FUNC(title=&title., var_var=&var., output_ds=temp_freq);
-    %JOIN_TO_TEMPLATE(temp_freq, ds_join, %quote(&output_cols.), items, %quote(&item_list.), %quote(&select_str.));
-    /* Create and join title dataset */
-    data ds_title;
-        attrib
-            title length=$100 format=$100.
-            items length=$100 format=$100.
-            seq format=best12.;
-        set ds_join(keep=items);
-        if _N_=1 then do;
-            title=&title.;
-        end;
-        seq=_N_;
-    run;
-    proc sql noprint;
-        create table temp_ds_demog as
-            select A.title, B.* from ds_title A left join ds_join B on A.items = B.items order by A.seq; 
-    quit;
-    /* Vertically join with output dataset */
-    data ds_demog;
-        set ds_demog temp_ds_demog;
-    run;
-%mend DEMOG_FREQ;
-
 %macro FREQ_METAYN;
     %local i row_count item2 item3 item4;
     %let item2='あり';
@@ -121,14 +85,14 @@ SAS version : 9.4
 options noquotelenmax; 
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
 %MEANS_FUNC(title='年齢', var_var=AGE);
-%DEMOG_FREQ(sex, %quote('男性', '女性'), '性別');
-%DEMOG_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
-%DEMOG_FREQ(HNPCCYN, %quote('あり', 'なし', '不明'), 'HNPCC');
-%DEMOG_FREQ(TNMCAT, %quote('I', 'II', 'III', 'IV'), 'TNM分類');
-%DEMOG_FREQ(PS, %quote('0', '1', '2', '3', '4'), 'PS');
-%DEMOG_FREQ(SBCSITE, %quote('十二指腸', '空腸', '回腸'), '部位');
-%DEMOG_FREQ(SBCdegree, %quote('高分化', '中分化', '低分化', '未分化', '不明'), '病理組織の分化度');
-%DEMOG_FREQ(RASYN, %quote('あり', 'なし', '不明'), 'RAS変異の有無');
+%FORMAT_FREQ(sex, %quote('男性', '女性'), '性別');
+%FORMAT_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
+%FORMAT_FREQ(HNPCCYN, %quote('あり', 'なし', '不明'), 'HNPCC');
+%FORMAT_FREQ(TNMCAT, %quote('I', 'II', 'III', 'IV'), 'TNM分類');
+%FORMAT_FREQ(PS, %quote('0', '1', '2', '3', '4'), 'PS');
+%FORMAT_FREQ(SBCSITE, %quote('十二指腸', '空腸', '回腸'), '部位');
+%FORMAT_FREQ(SBCdegree, %quote('高分化', '中分化', '低分化', '未分化', '不明'), '病理組織の分化度');
+%FORMAT_FREQ(RASYN, %quote('あり', 'なし', '不明'), 'RAS変異の有無');
 %FREQ_META;
 %TO_NUM_TEST_RESULTS(var=LDH);
 %MEANS_FUNC(title='LDH', var_var=LDH_num);

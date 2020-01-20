@@ -437,6 +437,43 @@ options fmtsearch=(libads);
         alter table &output_ds. drop seq;
     quit;
 %mend JOIN_TO_TEMPLATE;
+%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog);
+    /*  *** Functional argument *** 
+        var : Target variable
+        item_list : Output these to items
+        title : Output it to title
+        output_ds : Output dataset
+        *** Example ***
+        %FORMAT_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
+    */
+    %local output_cols select_str;
+    %let output_cols=%quote(items char(100), all_cnt num, all_per num, ope_non_chemo_cnt num, ope_chemo_cnt num, non_ope_non_chemo_cnt num, non_ope_chemo_cnt num, ope_non_chemo_per num, ope_chemo_per num, non_ope_non_chemo_per num, non_ope_chemo_per num);
+    %let select_str=%quote(B.all_cnt label=&all_group., B.all_per label=&all_group., B.ope_non_chemo_cnt label=&ope_non_chemo., B.ope_non_chemo_per label=&ope_non_chemo., B.ope_chemo_cnt label=&ope_chemo., B.ope_chemo_per label=&ope_chemo., B.non_ope_non_chemo_cnt label=&non_ope_non_chemo., B.non_ope_non_chemo_per label=&non_ope_non_chemo.,  B.non_ope_chemo_cnt label=&non_ope_chemo., B.non_ope_chemo_per label=&non_ope_non_chemo.);
+    %CREATE_OUTPUT_DS(output_ds=temp_freq, items_label=&title.);
+    %FREQ_FUNC(title=&title., var_var=&var., output_ds=temp_freq);
+    %JOIN_TO_TEMPLATE(temp_freq, ds_join, %quote(&output_cols.), items, %quote(&item_list.), %quote(&select_str.));
+    /* Create and join title dataset */
+    data ds_title;
+        attrib
+            title length=$100 format=$100.
+            items length=$100 format=$100.
+            seq format=best12.;
+        set ds_join(keep=items);
+        if _N_=1 then do;
+            title=&title.;
+        end;
+        seq=_N_;
+    run;
+    proc sql noprint;
+        create table temp_ds_demog as
+            select A.title, B.* from ds_title A left join ds_join B on A.items = B.items order by A.seq; 
+    quit;
+    /* Vertically join with output dataset */
+    data &output_ds.;
+        set &output_ds. temp_ds_demog;
+    run;
+%mend FORMAT_FREQ;
+
 
 %inc "&projectpath.\program\SAS\macro\libfunction.sas";
 

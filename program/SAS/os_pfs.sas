@@ -89,15 +89,18 @@ SAS version : 9.4
         ods rtf close;
     ods listing;
     ods graphics /reset=all;
-
-    proc export data=os
-        outfile="&outpath.\&output_filename..csv"
-        dbms=csv replace;
-    run;
-    proc export data=&output_survrate.
-        outfile="&outpath.\&output_survrate..csv"
-        dbms=csv replace;
-    run;
+    %if %sysfunc(exist(os)) %then %do;
+        proc export data=os
+            outfile="&outpath.\&output_filename..csv"
+            dbms=csv replace;
+        run;
+    %end;  
+    %if %sysfunc(exist(&output_survrate.)) %then %do;
+      proc export data=&output_survrate.
+          outfile="&outpath.\&output_survrate..csv"
+          dbms=csv replace;
+      run;
+    %end;  
 
 %mend OS_FUNC;
 
@@ -167,9 +170,9 @@ data ds_os ds_ope_os ds_non_ope_os;
     end;
 run;
 * Kaplan-Meier, log-rank;
-%OS_FUNC(ds_os, os_1, analysis_group, os_years);
-%OS_FUNC(ds_ope_os, os_2, analysis_set, os_years);
-%OS_FUNC(ds_non_ope_os, os_3, analysis_set, os_years);
+%OS_FUNC(ds_os, _5_5_1_os_1, analysis_group, os_years);
+%OS_FUNC(ds_ope_os, _5_5_1_os_2, analysis_set, os_years);
+%OS_FUNC(ds_non_ope_os, _5_5_1_os_3, analysis_set, os_years);
 
 * event;
 %CREATE_OUTPUT_DS(output_ds=ds_death, items_label='イベント');
@@ -182,13 +185,13 @@ data ds_death;
     else title = 'n';
     keep title ope_non_chemo_cnt ope_chemo_cnt non_ope_non_chemo_cnt non_ope_chemo_cnt;
 run;
-%ds2csv (data=ds_death, runmode=b, csvfile=&outpath.\os_event.csv, labels=Y);
+%ds2csv (data=ds_death, runmode=b, csvfile=&outpath.\_5_5_1_os_event.csv, labels=Y);
 
 * 5.5.2 PFS;
 %EDIT_DS_PFS;
-%OS_FUNC(ds_pfs, pfs_1, analysis_group, pfs_years);
-%OS_FUNC(ds_ope_pfs, pfs_2, analysis_set, pfs_years);
-%OS_FUNC(ds_non_ope_chemo_pfs, pfs_3, ., pfs_years);
+%OS_FUNC(ds_pfs, _5_5_2_pfs_1, analysis_group, pfs_years);
+%OS_FUNC(ds_ope_pfs, _5_5_2_pfs_2, analysis_set, pfs_years);
+%OS_FUNC(ds_non_ope_chemo_pfs, _5_5_2_pfs_3, ., pfs_years);
 
 * event;
 %CREATE_OUTPUT_DS(output_ds=ds_exacerbation, items_label='イベント');
@@ -204,4 +207,4 @@ run;
 data ds_pfs_event;
     set ds_death(keep=title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt) ds_exacerbation;
 run;
-%ds2csv (data=ds_pfs_event, runmode=b, csvfile=&outpath.\pfs_event.csv, labels=Y);
+%ds2csv (data=ds_pfs_event, runmode=b, csvfile=&outpath.\_5_5_2_pfs_event.csv, labels=Y);
