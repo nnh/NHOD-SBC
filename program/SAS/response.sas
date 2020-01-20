@@ -87,7 +87,7 @@ SAS version : 9.4
                             %quote(items char(2), count num, per num), 
                             items, 
                             %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), 
-                            %quote(&colname. label="&temp_regimen.", B.&temp_colname._per));
+                            %quote(&colname. label="&temp_regimen.", B.&temp_colname._per label='(%)'));
         %if &i.=1 %then %do;
             data &output_ds.;
                 set temp_join_regimen;
