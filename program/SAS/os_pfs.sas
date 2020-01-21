@@ -5,13 +5,14 @@ Author : Ohtsuka Mariko
 Date : 2020-1-7
 SAS version : 9.4
 **************************************************************************;
-%macro OS_FUNC(input_ds, output_filename, group_var, input_years, p_value=0.05);
+%macro OS_FUNC(input_ds, output_filename, group_var, input_years, p_value=0.05, pfs_f=0);
     /*  *** Functional argument *** 
         input_ds : Dataset for lifetest 
         output_filename : Output file name
         group_var : Group variable
         input_years : Time variable
         p_value : p value
+        pfs_f : pfs=1, os=0
         *** Example ***
         %OS_FUNC(ds_os, os_1, analysis_group, os_years);
     */
@@ -101,20 +102,24 @@ SAS version : 9.4
         ods rtf close;
     ods listing;
     ods graphics /reset=all;
-    %if %sysfunc(exist(os)) %then %do;
-        proc export data=os
-            outfile="&outpath.\&output_filename..csv"
-            label
-            dbms=csv replace;
+
+    %if &pfs_f.=1 %then %do;
+        data os;
+            set os;
+            label _CENSOR_='打ち切り値: 0=増悪・再発・死亡 1=打ち切り';
         run;
-    %end;  
-    %if %sysfunc(exist(&output_survrate.)) %then %do;
-      proc export data=&output_survrate.
-          outfile="&outpath.\&output_survrate..csv"
-          label
-          dbms=csv replace;
-      run;
-    %end;  
+    %end;
+    
+    proc export data=os
+        outfile="&outpath.\&output_filename..csv"
+        label
+        dbms=csv replace;
+    run;
+    proc export data=&output_survrate.
+        outfile="&outpath.\&output_survrate..csv"
+        label
+        dbms=csv replace;
+    run;
 
 %mend OS_FUNC;
 
@@ -147,7 +152,7 @@ SAS version : 9.4
         /* Update if exacerbation date is earlier than death date */
         update ds_pfs set pfs_end_date = RECURRDTC, censor = 0 where (RECURRYN = 2) and (RECURRDTC < pfs_end_date);
         /* Survival confirmation date */
-        update ds_pfs set pfs_end_date = SURVDTC, censor = 0 where (DTHFL ne '1') and (RECURRYN ne 2) and (pfs_start_date ne .) and (pfs_end_date ne .);
+        update ds_pfs set pfs_end_date = SURVDTC where (DTHFL ne '1') and (RECURRYN ne 2) and (pfs_start_date ne .) and (pfs_end_date ne .);
         update ds_pfs set pfs_days = getDays(pfs_start_date, pfs_end_date), pfs_years = getYears(getDays(pfs_start_date, pfs_end_date));
     quit;
     data ds_ope_pfs ds_non_ope_chemo_pfs;
@@ -203,9 +208,9 @@ run;
 
 * 5.5.2 PFS;
 %EDIT_DS_PFS;
-%OS_FUNC(ds_pfs, _5_5_2_pfs_1, analysis_group, pfs_years);
-%OS_FUNC(ds_ope_pfs, _5_5_2_pfs_2, analysis_set, pfs_years);
-%OS_FUNC(ds_non_ope_chemo_pfs, _5_5_2_pfs_3, ., pfs_years);
+%OS_FUNC(ds_pfs, _5_5_2_pfs_1, analysis_group, pfs_years, pfs_f=1);
+%OS_FUNC(ds_ope_pfs, _5_5_2_pfs_2, analysis_set, pfs_years, pfs_f=1);
+%OS_FUNC(ds_non_ope_chemo_pfs, _5_5_2_pfs_3, ., pfs_years, pfs_f=1);
 
 * event;
 %CREATE_OUTPUT_DS(output_ds=ds_exacerbation, items_label='イベント');
