@@ -16,6 +16,7 @@ options fmtsearch=(libads);
 %let create_output_dir=%sysfunc(dcreate(SAS, &projectpath\output.));
 %let outpath=&projectpath.\output\SAS;
 %let ads=&projectpath.\ptosh-format\ads;
+%let templatepath=&&projectpath.\output;
 * Define constants;
 %let efficacy_group='有効性解析対象集団';
 %let all_group='全体';
@@ -50,7 +51,7 @@ options fmtsearch=(libads);
     quit;
 %mend INSERT_SQL;
 
-%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='', output_contents_ds=ds_colnames, input_n=ds_n);
+%macro CREATE_OUTPUT_DS(output_ds='', title_char_len=100, items_char_len=100, items_label='', output_contents_ds=ds_colnames, input_n=ds_n, insert_n_flg=0);
     /*  *** Functional argument ***  
         output_ds : Output dataset
         title_char_len : Character string length of title column
@@ -58,6 +59,7 @@ options fmtsearch=(libads);
         items_label : Title column label
         output_contents_ds : Output contents dataset
         input_n : Case number data set
+        insert_n_flg : Set to 1 to include the number of cases in the data set
         *** Example ***
         %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
     */
@@ -77,7 +79,10 @@ options fmtsearch=(libads);
             non_ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_non_chemo. , &cst_per.)), %str(%')))",
             non_ope_chemo_cnt num label="%sysfunc(compress(&non_ope_chemo., %str(%')))",
             non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
-        insert into &output_ds.(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
+    quit;   
+    %if &insert_n_flg.=1 %then %do;
+        proc sql;
+            insert into &output_ds.(title, items, all_cnt, ope_chemo_cnt, ope_non_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt)
             select distinct 
                     '症例数', 
                     'n', 
@@ -86,7 +91,9 @@ options fmtsearch=(libads);
                     (select count from &input_n. where Category=&ope_non_chemo.),
                     (select count from &input_n. where Category=&non_ope_chemo.),
                     (select count from &input_n. where Category=&non_ope_non_chemo.) from &input_n.;
-    quit;   
+
+        quit;
+    %end;
     proc contents data=&output_ds. out=&output_contents_ds. varnum noprint; run;
 %mend CREATE_OUTPUT_DS;
 
@@ -251,7 +258,7 @@ options fmtsearch=(libads);
 
     /* Get variable format */
     %GET_CONTENTS(ptdata_contents, "&var_var.", format);
-    %if &temp_return_contents ne '' %then %do;
+    %if &temp_return_contents.^='' %then %do;
         %let temp_len=%sysfunc(length(&temp_return_contents.));
     %end;
     %else %do;
@@ -370,7 +377,7 @@ options fmtsearch=(libads);
         insert into temp_means set &cat_var.='dummy'; 
     quit;
     proc transpose data=temp_means out=tran_means;
-        var n mean std median q1 q3 min max;
+        var n mean std median min max;
     run;
     /* Set title only on the first line */
     proc sql;
@@ -437,30 +444,45 @@ options fmtsearch=(libads);
         alter table &output_ds. drop seq;
     quit;
 %mend JOIN_TO_TEMPLATE;
-%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog);
+%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog, input_ds=ptdata, output_n_flg=1);
     /*  *** Functional argument *** 
         var : Target variable
         item_list : Output these to items
         title : Output it to title
         output_ds : Output dataset
+        input_ds : Input dataset
+        output_n_flg : If 1, output the number of cases
         *** Example ***
         %FORMAT_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
     */
     %local output_cols select_str;
     %let output_cols=%quote(items char(100), all_cnt num, all_per num, ope_non_chemo_cnt num, ope_chemo_cnt num, non_ope_non_chemo_cnt num, non_ope_chemo_cnt num, ope_non_chemo_per num, ope_chemo_per num, non_ope_non_chemo_per num, non_ope_chemo_per num);
     %let select_str=%quote(B.all_cnt label=&all_group., B.all_per label=&all_group., B.ope_non_chemo_cnt label=&ope_non_chemo., B.ope_non_chemo_per label=&ope_non_chemo., B.ope_chemo_cnt label=&ope_chemo., B.ope_chemo_per label=&ope_chemo., B.non_ope_non_chemo_cnt label=&non_ope_non_chemo., B.non_ope_non_chemo_per label=&non_ope_non_chemo.,  B.non_ope_chemo_cnt label=&non_ope_chemo., B.non_ope_chemo_per label=&non_ope_non_chemo.);
-    %CREATE_OUTPUT_DS(output_ds=temp_freq, items_label=&title.);
-    %FREQ_FUNC(title=&title., var_var=&var., output_ds=temp_freq);
+    %CREATE_OUTPUT_DS(output_ds=temp_n, insert_n_flg=1);
+    data temp_n;
+        set temp_n(drop=title);
+    run;
+    %CREATE_OUTPUT_DS(output_ds=temp_freq);
+    %FREQ_FUNC(input_ds=&input_ds., title=&title., var_var=&var., output_ds=temp_freq);
     %JOIN_TO_TEMPLATE(temp_freq, ds_join, %quote(&output_cols.), items, %quote(&item_list.), %quote(&select_str.));
+    data ds_join;
+        set temp_n ds_join;
+    run;
     /* Create and join title dataset */
     data ds_title;
         attrib
             title length=$100 format=$100.
             items length=$100 format=$100.
             seq format=best12.;
-        set ds_join(keep=items);
         if _N_=1 then do;
             title=&title.;
+        end;
+        if &output_n_flg.=1 then do;
+            set ds_join(keep=items);
+        end;
+        else do;
+            set ds_join(keep=items);
+            where items^='n';
         end;
         seq=_N_;
     run;
@@ -472,8 +494,19 @@ options fmtsearch=(libads);
     data &output_ds.;
         set &output_ds. temp_ds_demog;
     run;
+
 %mend FORMAT_FREQ;
+%macro DELETE_PER(target_ds);
+    /*  *** Functional argument *** 
+        target_ds : dataset
+        *** Example ***
+        %DELETE_PER(temp_meta);;
+    */
+    proc sql noprint;
+        update &target_ds.
+            set all_per=., ope_non_chemo_per=., ope_chemo_per=., non_ope_non_chemo_per=., non_ope_chemo_per=.;
+    quit;
+%mend DELETE_PER;
 
 
 %inc "&projectpath.\program\SAS\macro\libfunction.sas";
-

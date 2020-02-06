@@ -2,12 +2,13 @@
 Program Name : main.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-09
+Date : 2020-01-27
 SAS version : 9.4
 *******************************************************/
 * Define constants;
 %let saihi_input=解析対象集団一覧.xlsx;
 %let saihi_input_range=Sheet1!R2C1:R33C4;
+%let template_input=解析図表テンプレート20181129.xlsx;
 **************************************************************************;
 * Define macros;
 %macro GET_THISFILE_FULLPATH;
