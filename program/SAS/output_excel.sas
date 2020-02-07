@@ -79,26 +79,22 @@ run;
 %OUTPUT_INTO_SHEET(ds_t002, %quote(all t ope_non_chemo t ope_chemo t non_ope_chemo t non_ope_non_chemo), 
                      t002, start_row=7, start_col=4, last_col=8);
 *複数の原発癌に関する記述;
-%OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid t MHCOM), l001, start_row=5, start_col=1, last_col=8);
+%OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid t MHCOM), l001, start_row=4, start_col=1, last_col=8);
 *手術の根治度 (癌遺残);
-data ds_t003;
-    set ds_surgical_curability;
-    keep ope_non_chemo_cnt ope_chemo_cnt;
-run;
-%OUTPUT_INTO_SHEET(ds_t003, %quote(ope_non_chemo_cnt t ope_chemo_cnt), t003, start_row=6, start_col=2, last_col=3);
+%OUTPUT_INTO_SHEET(ds_surgical_curability, %quote(ope_non_chemo_cnt t ope_chemo_cnt), t003, start_row=5, start_col=2,
+                     last_col=3);
 *アジュバント化学療法レジメン;
-data ds_t004;
-    set ds_adjuvant_chemo_regimen;
-    keep ope_chemo_cnt;
-run;
-%OUTPUT_INTO_SHEET(ds_t004, %quote(ope_chemo_cnt), t004, start_row=6, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(ds_adjuvant_chemo_regimen, %quote(ope_chemo_cnt), t004, start_row=5, start_col=2, last_col=2);
 *第一選択化学療法レジメン;
-data ds_t005;
-    set ds_first_line_chemo_regimen;
-    keep non_ope_chemo_cnt;
-run;
-%OUTPUT_INTO_SHEET(ds_t005, %quote(non_ope_chemo_cnt), t005, start_row=6, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(ds_first_line_chemo_regimen, %quote(non_ope_chemo_cnt), t005, start_row=5, start_col=2, last_col=2);
 *原発巣切除の有無;
+%OUTPUT_INTO_SHEET(ds_primary_site_resection, 
+                     %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t006, 
+                     start_row=5, start_col=2, last_col=2);
+*治療の奏功割合;
+%OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=6, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(response_ope_chemo, %quote(ope_chemo_cnt), t016, start_row=6, start_col=2, last_col=7);
+
 /*
 data _null_;
     file sas2xl;

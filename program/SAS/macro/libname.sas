@@ -221,13 +221,14 @@ options fmtsearch=(libads);
     run;
 %mend EXEC_FREQ;
 
-%macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
+%macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog, contents=ptdata_contents);
     /*  *** Functional argument ***
         input_ds : Dataset to be aggregated
         title : Text to output in title column
         cat_var : Categorical variable
         var_var : Variable to analyze
         output_ds : Output dataset 
+        contents : contents dataset
         *** Example ***
         %FREQ_FUNC(title='クローン病', var_var=CrohnYN);
     */
@@ -257,7 +258,7 @@ options fmtsearch=(libads);
     run;
 
     /* Get variable format */
-    %GET_CONTENTS(ptdata_contents, "&var_var.", format);
+    %GET_CONTENTS(&contents., "&var_var.", format);
     %if &temp_return_contents.^='' %then %do;
         %let temp_len=%sysfunc(length(&temp_return_contents.));
     %end;
@@ -324,10 +325,10 @@ options fmtsearch=(libads);
     run;
 
     /* Delete the working dataset */
-    proc datasets lib=work nolist; 
+    /*proc datasets lib=work nolist; 
         delete temp1-temp&demog_group_count. temp_ds temp_all_ds temp_output temp_sum temp_sum_var temp_freq_all; 
         run; 
-    quit;
+    quit;*/
 
 %mend FREQ_FUNC;
 
@@ -444,7 +445,7 @@ options fmtsearch=(libads);
         alter table &output_ds. drop seq;
     quit;
 %mend JOIN_TO_TEMPLATE;
-%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog, input_ds=ptdata, output_n_flg=1);
+%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog, input_ds=ptdata, output_n_flg=1, contents=ptdata_contents);
     /*  *** Functional argument *** 
         var : Target variable
         item_list : Output these to items
@@ -452,6 +453,7 @@ options fmtsearch=(libads);
         output_ds : Output dataset
         input_ds : Input dataset
         output_n_flg : If 1, output the number of cases
+        contents : contents dataset
         *** Example ***
         %FORMAT_FREQ(CrohnYN, %quote('あり', 'なし', '不明'), 'クローン病');
     */
@@ -463,7 +465,7 @@ options fmtsearch=(libads);
         set temp_n(drop=title);
     run;
     %CREATE_OUTPUT_DS(output_ds=temp_freq);
-    %FREQ_FUNC(input_ds=&input_ds., title=&title., var_var=&var., output_ds=temp_freq);
+    %FREQ_FUNC(input_ds=&input_ds., title=&title., var_var=&var., output_ds=temp_freq, contents=&contents.);
     %JOIN_TO_TEMPLATE(temp_freq, ds_join, %quote(&output_cols.), items, %quote(&item_list.), %quote(&select_str.));
     data ds_join;
         set temp_n ds_join;
@@ -507,6 +509,59 @@ options fmtsearch=(libads);
             set all_per=., ope_non_chemo_per=., ope_chemo_per=., non_ope_non_chemo_per=., non_ope_chemo_per=.;
     quit;
 %mend DELETE_PER;
+%macro EDIT_TREATMENT(output_ds, var, items_list, keep_list, input_ds=ptdata);
+    %CREATE_OUTPUT_DS(output_ds=temp_treatment);
+    %FORMAT_FREQ(&var., &items_list., '', output_ds=temp_treatment, input_ds=&input_ds., output_n_flg=1);
+    data temp1;
+        set temp_treatment;
+        keep &keep_list.;
+    run;
+    data temp2 temp3;
+        set temp1;
+        if _N_=1 then do;
+            output temp2;
+        end;
+        else do;
+            output temp3;
+        end;
+    run;
+    %EDIT_N(temp2, temp4);
+    %EDIT_N(temp3, temp5, pattern_f=1);
+    data &output_ds.;
+        set temp4 temp5;
+    run;
+
+%mend EDIT_TREATMENT;
+%macro EDIT_N(input_ds, output_ds, pattern_f=0);
+    proc contents data=&input_ds. out=temp_contents varnum noprint;
+    run;
+    proc sql noprint;
+        select count(*) into:var_cnt from temp_contents;
+    quit;
+    data temp_ds;
+        set &input_ds.;
+    run;
+    %let dsid=%sysfunc(open(&input_ds., i));
+    %do i = 1 %to &var_cnt.; 
+        %let var_name=%sysfunc(varname(&dsid., &i.));
+        data temp_ds;
+            set temp_ds;
+            if &pattern_f.=0 then do;
+                temp=catt('(n=', &var_name., ')');
+            end;
+            else if &pattern_f.=1 then do;
+                temp=put(&var_name., best12.);
+            end;
+            drop &var_name.;
+            rename temp=&var_name.;
+        run;
+    %end;
+    %let rc=%sysfunc(close(&dsid));
+    data &output_ds.;
+        set temp_ds;
+    run;
+%mend;
+
 
 
 %inc "&projectpath.\program\SAS\macro\libfunction.sas";

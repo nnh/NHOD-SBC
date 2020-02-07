@@ -2,7 +2,7 @@
 Program Name : response.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-10
+Date : 2020-02-06
 SAS version : 9.4
 **************************************************************************;
 * 5.5.3. Response rate of treatment;
@@ -110,26 +110,17 @@ SAS version : 9.4
 
 %mend EDIT_RESPONSE;
 
-%SET_FREQ(ds_res_1, 'é°ó√ÇÃëtå¯äÑçá', RECISTORRES, %str(ope_non_chemo_cnt ope_non_chemo_per));
-
+%EDIT_TREATMENT(response_ope_non_chemo, RECISTORRES, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(ope_non_chemo_cnt));
 data ds_ope_chemo ds_non_ope_chemo;
     set ptdata;
     if analysis_set=&ope_chemo. then output ds_ope_chemo;
     if analysis_set=&non_ope_chemo. then output ds_non_ope_chemo;
 run;
-%JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, 
-                    %quote(items char(2), count num, per num), 
-                    items, 
-                    %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), 
-                    %quote(B.ope_non_chemo_cnt label="é°ó√Ç»Çµ", B.ope_non_chemo_per label='(%)'));
-%ds2csv (data=response_ope_non_chemo, runmode=b, csvfile=&outpath.\_5_5_3_response_ope_no_chemo.csv, labels=Y);
-
 proc sql;
     create table ds_res_2
     as select adjuvantCAT, RECISTORRES, count(*) as count from ds_ope_chemo group by adjuvantCAT, RECISTORRES;
 quit;
 %EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo);
-
 proc sql;
     create table ds_res_3
     as select chemCAT, RECISTORRES, count(*) from ds_non_ope_chemo group by chemCAT, RECISTORRES;
@@ -138,6 +129,6 @@ quit;
 
 * Delete the working dataset;
 proc datasets lib=work nolist; 
-    delete ds_res_1-ds_res_3 temp_output_ds regimen_ds temp_join_regimen temp_regimen_ds; 
+    delete ds_res_2-ds_res_3 temp_output_ds regimen_ds temp_join_regimen temp_regimen_ds; 
     run; 
 quit;
