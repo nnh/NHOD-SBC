@@ -2,11 +2,17 @@
 Program Name : demog.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-06
+Date : 2020-02-10
 SAS version : 9.4
 **************************************************************************;
 * 5.3. Background and demographic characteristics;
 options noquotelenmax; 
+%CREATE_OUTPUT_DS(output_ds=ds_demog_n, items_label='背景と人口統計学的特性', insert_n_flg=1);
+data ds_demog_n;
+    set ds_demog_n;
+    keep all_cnt ope_non_chemo_cnt ope_chemo_cnt non_ope_non_chemo_cnt non_ope_chemo_cnt;
+run;
+%EDIT_N(ds_demog_n, ds_demog_n, pattern_f=0);
 %CREATE_OUTPUT_DS(output_ds=ds_demog, items_label='背景と人口統計学的特性');
 %MEANS_FUNC(title='年齢', var_var=AGE);
 %FORMAT_FREQ(sex, %quote('男性', '女性'), '性別');

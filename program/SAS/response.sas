@@ -2,7 +2,7 @@
 Program Name : response.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-06
+Date : 2020-02-12
 SAS version : 9.4
 **************************************************************************;
 * 5.5.3. Response rate of treatment;
@@ -24,15 +24,16 @@ SAS version : 9.4
     run;
 %mend GET_FORMAT_LENGTH;
 
-%macro EDIT_RESPONSE(input_ds, key_col, output_ds);
+%macro EDIT_RESPONSE(input_ds, key_col, output_ds, regimens);
     /*  *** Functional argument ***  
         input_ds : Input dataset
         key_col : Key variables
         output_ds : Output dataset
+        regimens : List of regimens
         *** Example ***
         %EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo);
     */
-    %local i delim_count regimens temp_colname temp_regimen colname temp_sum;
+    %local i delim_count temp_colname temp_regimen colname temp_sum;
     %GET_CONTENTS(ptdata_contents, "&key_col.", format);
     %GET_FORMAT_LENGTH(&temp_return_contents.);
     /* Convert format to string */
@@ -40,95 +41,72 @@ SAS version : 9.4
         set &input_ds(rename=(&key_col.=temp_col));
         &key_col.=put(temp_col, &format_length..);
     run;
-    /* Delete observation if treatment name is missing */
-    data temp_input_ds_str;
-        set temp_input_ds_str;
-        if not missing(temp_col) then output; 
-    run;
-    /* Count the number of treatments */
-    proc sql noprint;
-        create table temp_ds
-            as select &key_col., RECISTORRES, count(*) as temp_count 
-               from temp_input_ds_str 
-               group by &key_col., RECISTORRES; 
-    quit;
-    /* List of treatments */
-    proc sql noprint;
-        select distinct &key_col. into:regimens separated by ',' from temp_ds;
-    quit;
     %let delim_count = %sysfunc(count("&regimens", %quote(,)));
+    %put &delim_count.;
     %GET_CONTENTS(ptdata_contents, "RECISTORRES", format);
     %GET_FORMAT_LENGTH(&temp_return_contents.);
     %do i = 1 %to %eval(&delim_count.+1);
         %let temp_regimen=%sysfunc(scan(%quote(&regimens), &i., %quote(,)));
-        /* Prohibition character check */
-        %let temp_colname=%sysfunc(compress(&temp_regimen.));
-        %let temp_colname=%sysfunc(compress(&temp_colname., "/"));
-        proc sql noprint;
-            select sum(temp_count) into: temp_sum from temp_ds where &key_col. = "&temp_regimen.";
-            create table temp_regimen_ds
-                as select RECISTORRES as temp_items, 
-                          temp_count as &temp_colname., 
-                          round(temp_count / &temp_sum. * 100, 1) as &temp_colname._per 
-                   from temp_ds 
-                   where &key_col. = "&temp_regimen.";
-        quit;
-        /* Convert format to string */
-        data regimen_ds;
-            set temp_regimen_ds;
-            items=put(temp_items, &format_length..);
+        %put &temp_regimen.;
+        data temp;
+            set temp_input_ds_str(rename=(RECISTORRES=temp_col2));;
+            where &key_col.=&temp_regimen.;
+            RECISTORRES=put(temp_col2, &format_length..);
+            keep &key_col. RECISTORRES;
         run;
-        proc sql noprint;
-            insert into regimen_ds values(., %eval(&temp_sum.), ., 'n');
+        proc sql;
+            create table temp&i.
+            as select RECISTORRES as items, count(*) as count from temp group by RECISTORRES
+               union
+               select 'n' as items, count(*) as count from temp;
         quit;
-
-        %let colname=B.&temp_colname.;
-        %JOIN_TO_TEMPLATE(regimen_ds, temp_join_regimen, 
-                            %quote(items char(2), count num, per num), 
+        %JOIN_TO_TEMPLATE(temp&i., ds_join&i., 
+                            %quote(items char(2), count num), 
                             items, 
                             %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), 
-                            %quote(&colname. label="&temp_regimen.", B.&temp_colname._per label='(%)'));
+                            %quote(b.count label="test"));
         %if &i.=1 %then %do;
-            data &output_ds.;
-                set temp_join_regimen;
+            data &output_ds._all;
+                set ds_join&i.;
             run;
         %end;
         %else %do;
             data temp_output_ds;
-                set &output_ds.;
+                set &output_ds._all;
             run;
-            proc delete data=&output_ds.;
+            proc delete data=&output_ds._all;
             run;
             proc sql noprint;
-                create table &output_ds. as
-                    select A.*, &colname., B.&temp_colname._per 
-                    from temp_output_ds A inner join temp_join_regimen B on A.items = B.items;
+                create table &output_ds._all as
+                    select A.*, b.count as count&i. 
+                    from temp_output_ds A inner join ds_join&i. B on A.items = B.items;
             quit;
         %end;
     %end;
-    %ds2csv (data=&output_ds., runmode=b, csvfile=&outpath.\_5_5_3_&output_ds..csv, labels=Y);
+
+    data &output_ds. &output_ds._n;
+        set &output_ds._all;
+        if _N_=1 then do;
+            output &output_ds._n;
+        end;
+        else do;
+            output &output_ds;
+        end;
+    run;
+    %EDIT_N(&output_ds._n, &output_ds._n, pattern_f=2)
+    %EDIT_N(&output_ds., &output_ds., pattern_f=1)
+    data &output_ds.;
+        set &output_ds._n &output_ds.;
+        drop items;
+    run;
 
 %mend EDIT_RESPONSE;
 
-%EDIT_TREATMENT(response_ope_non_chemo, RECISTORRES, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(ope_non_chemo_cnt));
+%EDIT_TREATMENT(response_ope_non_chemo, RECISTORRES, %quote('CR', 'PR', 'SD', 'PD', 'NE'), %quote(ope_non_chemo_cnt));
 data ds_ope_chemo ds_non_ope_chemo;
     set ptdata;
     if analysis_set=&ope_chemo. then output ds_ope_chemo;
     if analysis_set=&non_ope_chemo. then output ds_non_ope_chemo;
 run;
-proc sql;
-    create table ds_res_2
-    as select adjuvantCAT, RECISTORRES, count(*) as count from ds_ope_chemo group by adjuvantCAT, RECISTORRES;
-quit;
-%EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo);
-proc sql;
-    create table ds_res_3
-    as select chemCAT, RECISTORRES, count(*) from ds_non_ope_chemo group by chemCAT, RECISTORRES;
-quit;
-%EDIT_RESPONSE(ds_non_ope_chemo, chemCAT, response_non_ope_chemo);
-
-* Delete the working dataset;
-proc datasets lib=work nolist; 
-    delete ds_res_2-ds_res_3 temp_output_ds regimen_ds temp_join_regimen temp_regimen_ds; 
-    run; 
-quit;
+%EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo, &regimens_adjuvant.);
+%EDIT_RESPONSE(ds_non_ope_chemo, chemCAT, response_non_ope_chemo, &regimens_first_line.);

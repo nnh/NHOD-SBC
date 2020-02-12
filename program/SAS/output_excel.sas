@@ -71,6 +71,8 @@ run;
 
 
 *背景と人口統計学的特性;
+%OUTPUT_INTO_SHEET(ds_demog_n, %quote(all_cnt t ope_non_chemo_cnt t ope_chemo_cnt t non_ope_chemo_cnt t non_ope_non_chemo_cnt), 
+                     t002, start_row=5, start_col=4, last_col=8);
 %CAT_COUNT_AND_PERCENT(ds_demog, all_cnt, all, ds_t002);
 %CAT_COUNT_AND_PERCENT(ds_t002, ope_non_chemo_cnt, ope_non_chemo, ds_t002);
 %CAT_COUNT_AND_PERCENT(ds_t002, ope_chemo_cnt, ope_chemo, ds_t002);
@@ -90,10 +92,11 @@ run;
 *原発巣切除の有無;
 %OUTPUT_INTO_SHEET(ds_primary_site_resection, 
                      %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t006, 
-                     start_row=5, start_col=2, last_col=2);
+                     start_row=5, start_col=2, last_col=5);
 *治療の奏功割合;
-%OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=6, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(response_ope_chemo, %quote(ope_chemo_cnt), t016, start_row=6, start_col=2, last_col=7);
+%OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(response_ope_chemo, %quote(count t count2 t count3 t count4 t count5), t016, 
+                     start_row=5, start_col=2, last_col=7);
 
 /*
 data _null_;
