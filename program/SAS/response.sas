@@ -6,64 +6,50 @@ Date : 2020-02-12
 SAS version : 9.4
 **************************************************************************;
 * 5.5.3. Response rate of treatment;
-%macro GET_FORMAT_LENGTH(format_name);
-    /*  *** Functional argument ***  
-        format_name : format name
-        *** Example ***
-        %GET_FORMAT_LENGTH(FMT_18_F);
-    */
-    %global format_length;
-    proc format library=libads cntlout=temp_fmt_len;
-        select &format_name.;
-    run;
-    data _NULL_;
-        set temp_fmt_len;
-        if _N_=1 then do;
-            call symput('format_length', cat("&format_name.", LENGTH));
-        end;
-    run;
-%mend GET_FORMAT_LENGTH;
-
-%macro EDIT_RESPONSE(input_ds, key_col, output_ds, regimens);
+%macro EDIT_RESPONSE(input_ds, key_col, output_ds);
     /*  *** Functional argument ***  
         input_ds : Input dataset
         key_col : Key variables
         output_ds : Output dataset
-        regimens : List of regimens
         *** Example ***
         %EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo);
     */
     %local i delim_count temp_colname temp_regimen colname temp_sum;
     %GET_CONTENTS(ptdata_contents, "&key_col.", format);
     %GET_FORMAT_LENGTH(&temp_return_contents.);
-    /* Convert format to string */
-    data temp_input_ds_str;
-        set &input_ds(rename=(&key_col.=temp_col));
-        &key_col.=put(temp_col, &format_length..);
+    proc format library=libads cntlout=work.temp_format;
+        select &temp_return_contents.;
     run;
-    %let delim_count = %sysfunc(count("&regimens", %quote(,)));
-    %put &delim_count.;
-    %GET_CONTENTS(ptdata_contents, "RECISTORRES", format);
-    %GET_FORMAT_LENGTH(&temp_return_contents.);
-    %do i = 1 %to %eval(&delim_count.+1);
-        %let temp_regimen=%sysfunc(scan(%quote(&regimens), &i., %quote(,)));
-        %put &temp_regimen.;
-        data temp;
-            set temp_input_ds_str(rename=(RECISTORRES=temp_col2));;
-            where &key_col.=&temp_regimen.;
-            RECISTORRES=put(temp_col2, &format_length..);
-            keep &key_col. RECISTORRES;
+    data format_num_list;
+        set temp_format;
+        fmt_num=input(compress(start), best.);
+        keep fmt_num label;
+    run;
+    proc sql noprint;
+        insert into format_num_list set fmt_num=., label='Ž¡—Ã‚È‚µ';
+    quit;
+    proc sql noprint;
+        select count(*) into:row_count trimmed from format_num_list;
+    quit;
+    %put &row_count.;
+    %do i = 1 %to &row_count.;
+        data _NULL_;
+            set format_num_list;
+            if _N_=&i. then do;
+                call symput('target', fmt_num);
+            end;
         run;
+        %put &target.;
         proc sql;
             create table temp&i.
-            as select RECISTORRES as items, count(*) as count from temp group by RECISTORRES
+            as select RECISTORRES as items, count(*) as count from &input_ds. where &key_col.= &target. group by RECISTORRES
                union
-               select 'n' as items, count(*) as count from temp;
+               select 0 as items, count(*) as count from &input_ds. where &key_col.= &target.;
         quit;
         %JOIN_TO_TEMPLATE(temp&i., ds_join&i., 
-                            %quote(items char(2), count num), 
+                            %quote(items num, count num), 
                             items, 
-                            %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), 
+                            %quote(0, 1, 2, 3, 4, 5), 
                             %quote(b.count label="test"));
         %if &i.=1 %then %do;
             data &output_ds._all;
@@ -83,7 +69,6 @@ SAS version : 9.4
             quit;
         %end;
     %end;
-
     data &output_ds. &output_ds._n;
         set &output_ds._all;
         if _N_=1 then do;
@@ -108,5 +93,6 @@ data ds_ope_chemo ds_non_ope_chemo;
     if analysis_set=&ope_chemo. then output ds_ope_chemo;
     if analysis_set=&non_ope_chemo. then output ds_non_ope_chemo;
 run;
-%EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo, &regimens_adjuvant.);
-%EDIT_RESPONSE(ds_non_ope_chemo, chemCAT, response_non_ope_chemo, &regimens_first_line.);
+%EDIT_RESPONSE(ds_ope_chemo, adjuvantCAT, response_ope_chemo);
+%EDIT_RESPONSE(ds_non_ope_chemo, chemCAT, response_non_ope_chemo);
+

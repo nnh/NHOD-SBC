@@ -2,37 +2,40 @@
 Program Name : tumor_reduction.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-10
+Date : 2020-02-12
 SAS version : 9.4
 **************************************************************************;
 %macro TUMOR_REDUCTION_EXEC;
-    %local ds_output_tumor varname_t label_t i temp_varname temp_label;
-    %let ds_output_tumor=_5_5_4_ds_tumor_reduction;
+    %local varname_t label_t i temp_varname temp_label;
     %let varname_t="SBCsum,Lesion3m,Lesion6m";
     %let label_t="ベースライン,3ヵ月,6ヵ月";
-    %CREATE_OUTPUT_DS(output_ds=&ds_output_tumor., items_label='腫瘍の縮小率');
+    %CREATE_OUTPUT_DS(output_ds=ds_t018, items_label='腫瘍の縮小率');
     %do i = 1 %to 3; 
-        data temp_&i.;
-            set &ds_output_tumor.;
+        data temp&i.;
+            set ds_t018;
         run;
         %let temp_varname=%scan(&varname_t., &i., "," );
         %let temp_label=%scan(&label_t., &i., "," );
         %TO_NUM_TEST_RESULTS(var=&temp_varname.);
-        %MEANS_FUNC(title="&temp_varname.", var_var=&temp_varname._num, output_ds=temp_&i.);
-        data temp_tumor;
-            %if %sysfunc(exist(work.temp_tumor)) %then %do;
-                set temp_tumor;
-            %end;
-            set temp_&i.(keep=items non_ope_chemo_cnt rename=(non_ope_chemo_cnt=&temp_varname.));
-            label &temp_varname.=&temp_label.;
+        %MEANS_FUNC(title="&temp_varname.", var_var=&temp_varname._num, output_ds=temp&i.);
+        data temp&i.;
+            set temp&i.;
+            keep items non_ope_chemo_cnt;
         run;
     %end; 
-    data &ds_output_tumor.;
-        set temp_tumor;
-        if _N_=1 then delete;
+    proc sql noprint;
+        create table temp_ds_t018
+        as select a.*, b.non_ope_chemo_cnt as Lesion3m
+        from temp1 as a, temp2 as b
+        where a.items = b.items;
+        create table ds_t018
+        as select a.*, b.non_ope_chemo_cnt as Lesion6m
+        from temp_ds_t018 as a, temp3 as b
+        where a.items = b.items;
+    quit;
+    data ds_t018;
+        set ds_t018;
+        drop items;
     run;
-    %ds2csv (data=&ds_output_tumor., runmode=b, csvfile=&outpath.\&ds_output_tumor..csv, labels=Y);
-    * Delete the working dataset;
-    proc datasets lib=work nolist; delete temp_1-temp_3 temp_tumor; run; quit;
 %mend TUMOR_REDUCTION_EXEC;
 %TUMOR_REDUCTION_EXEC;

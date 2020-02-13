@@ -97,6 +97,13 @@ run;
 %OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
 %OUTPUT_INTO_SHEET(response_ope_chemo, %quote(count t count2 t count3 t count4 t count5), t016, 
                      start_row=5, start_col=2, last_col=7);
+%OUTPUT_INTO_SHEET(response_non_ope_chemo, %quote(count t count2 t count3 t count4 t count5 t count6 t count7 t count8 t count9 t count10 t count11), t017, 
+                     start_row=5, start_col=2, last_col=12);
+*éÓ·áÇÃèkè¨ó¶;
+%OUTPUT_INTO_SHEET(ds_t018, %quote(non_ope_chemo_cnt t Lesion3m t Lesion6m), t018, start_row=5, start_col=2, last_col=4);
+*é°ó√Ç…ÇÊÇÈóLäQéñè€;
+%OUTPUT_INTO_SHEET(ae_ope_chemo, %quote(_1 t _2 t _3 t _4), t019, start_row=6, start_col=2, last_col=5);
+%OUTPUT_INTO_SHEET(ae_non_ope_chemo, %quote(_1 t _2 t _3 t _4), t019, start_row=6, start_col=6, last_col=9);
 
 /*
 data _null_;

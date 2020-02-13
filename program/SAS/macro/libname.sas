@@ -389,24 +389,6 @@ options fmtsearch=(libads);
     proc datasets lib=work nolist; delete temp_all_ds temp_ds temp_means tran_means; run; quit;
 
 %mend MEANS_FUNC;
-%macro SET_FREQ(output_ds_name, str_label, var, str_keep);
-    /*  *** Functional argument *** 
-        output_ds_name : Name of the data set to output
-        str_label : Title
-        var : Target variable name of input data set
-        str_keep : Variables to leave in the output data set
-        *** Example ***
-        %SET_FREQ(ds_surgical_curability, 'éËèpÇÃç™é°ìx', resectionCAT, %str(ope_non_chemo_cnt ope_non_chemo_per ope_chemo_cnt ope_chemo_per));
-    */
-    %CREATE_OUTPUT_DS(output_ds=&output_ds_name.)
-    proc contents data=&output_ds_name. out=ds_colnames varnum noprint; run;
-    %FREQ_FUNC(var_var=&var., output_ds=&output_ds_name.);
-    data &output_ds_name.;
-        set &output_ds_name.;
-        if _N_=1 then title=&str_label;
-        keep title items &str_keep.;
-    run;
-%mend SET_FREQ;
 %macro JOIN_TO_TEMPLATE(input_ds, output_ds, output_cols, join_key_colname, template_rows, select_str);
     /*  *** Functional argument ***  
         input_ds : Input dataset

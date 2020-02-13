@@ -2,7 +2,7 @@
 Program Name : ae.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-10
+Date : 2020-02-13
 SAS version : 9.4
 **************************************************************************;
 %macro AE_EXEC(target_column, output_ds);
@@ -12,30 +12,21 @@ SAS version : 9.4
         *** Example ***
         %AE_EXEC(ope_chemo_cnt, ae_ope_chemo);
     */
-    %local ds_output_ae varname_t i temp_varname temp_label max_index colname;
-    %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,AE_DecreasNeut,
+    %local varname_t max_index i temp_varname temp_label;
+    %let varname_t="AE_MortoNeuropathy,AE_SensNeuropathy,AE_diarrhea,dummy,AE_DecreasNeut,
                     AE_DecreasPLT,AE_Skin,AE_Anorexia,AE_HighBDPRES,AE_Prote";
-    %let label_t="末梢性運動ニューロパチー,末梢性感覚ニューロパチー,下痢,好中球減少,
-                  血小板減少,皮膚障害,食欲不振,高血圧,蛋白尿";
     %let max_index = %sysfunc(countc(&varname_t., ','));
     %let max_index = %eval(&max_index. + 1);
     %do i = 1 %to &max_index.; 
         %let temp_varname=%scan(&varname_t., &i., ",");
-        %let temp_label=%scan(&label_t., &i., ",");
-        %SET_FREQ(temp_ae, '治療による有害事象', &temp_varname._grd, %str(&target_column.));
-        /* Remove unnecessary space in items */
-        data ae_&i.;
-            set temp_ae(rename=(items=temp_items));
-            items=strip(temp_items);
-            drop temp_items;
+        %CREATE_OUTPUT_DS(output_ds=ds_ae, items_label='治療による有害事象');
+        %FREQ_FUNC(input_ds=input_ae, title='', cat_var=analysis_set, var_var=&temp_varname._grd, output_ds=temp_freq, contents=ae_contents);
+        data temp_freq_num;
+            set temp_freq(rename=(items=temp_items));
+            items=input(compress(temp_items), best.);
         run;
-        /* Form a AE table */
-        %let colname=B.&target_column.;
-        %JOIN_TO_TEMPLATE(ae_&i., temp_join_ae, 
-                            %quote(items char(1), &target_column. num), 
-                            items, 
-                            %quote('1', '2', '3', '4'), 
-                            %quote(&colname. label="&temp_label."));
+        %JOIN_TO_TEMPLATE(temp_freq_num, temp_join_ae, %quote(items num, &target_column. num), 
+                            items, %quote(1, 2, 3, 4), %quote(B.&target_column. label="&target_column."));
         %if &i. = 1 %then %do;
             data join_ae;
                 set temp_join_ae(rename=(&target_column.=&target_column.&i.));
@@ -49,7 +40,7 @@ SAS version : 9.4
             run;
             proc sql noprint;
                 create table join_ae as
-                    select A.*, &colname. as &target_column.&i. 
+                    select A.*, B.&target_column. as &target_column.&i. 
                     from temp_output_ds A inner join temp_join_ae B on A.items = B.items;
             quit;
         %end;
@@ -62,13 +53,18 @@ SAS version : 9.4
     data &output_ds.;
         set &output_ds.(rename=(_LABEL_=ae));
         label ae='grade';
-        drop _NAME_;
-    run;
-    %ds2csv (data=&output_ds., runmode=b, csvfile=&outpath.\_5_6_1_&output_ds..csv, labels=Y);
-
-    * Delete the working dataset;
-    proc datasets lib=work nolist; delete ae_1-ae_&max_index. temp_join_ae temp_ae; run; quit;
-
+        drop _NAME_ ae;
+    run;        
 %mend AE_EXEC;
+data input_ae;
+    set ptdata;
+    dummy_grd=.;
+run;
+proc contents data=input_ae out=temp_ae_contents varnum noprint; run;
+data ae_contents;
+    set temp_ae_contents(rename=(FORMAT=temp_format));
+    attrib FORMAT label="変数出力形式" length=$32 format=$32.;
+    FORMAT = "$";
+run;
 %AE_EXEC(ope_chemo_cnt, ae_ope_chemo);
 %AE_EXEC(non_ope_chemo_cnt, ae_non_ope_chemo);
