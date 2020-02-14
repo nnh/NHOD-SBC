@@ -2,7 +2,7 @@
 Program Name : libfunction.sas
 Purpose : Common processing
 Author : Ohtsuka Mariko
-Date : 2019-06-26
+Date : 2020-02-14
 SAS version : 9.4
 **************************************************************************;
 
@@ -12,6 +12,7 @@ options cmplib=sasfunc.functions;
 proc fcmp outlib=sasfunc.functions.test;
     deletefunc getDays;
     deletefunc getYears;
+    deletefunc setDecimalFormat;
 run;
 Quit;
 options cmplib=sasfunc.functions; 
@@ -24,16 +25,16 @@ proc fcmp outlib=sasfunc.functions.test;
         temp=round((days / 365), 0.001);
         return(temp);
     endsub;
-/*    function getLength(input_ds, var);
-        rc = run_macro('GET_LENGTH_MACRO', input_ds, var, var_len);
-        if rc eq 0 then return(var_len);
-        else return(.);
-    endsub;*/
+    function setDecimalFormat(input) $;
+        temp_input=round(input, 0.1);
+        temp=put(temp_input, 8.1);
+        return(temp);
+    endsub;
 run;
 /*list the source code*/
 Options cmplib=_null_; 
 proc fcmp library=sasfunc.functions;
-    listfunc getDays getYears;
+    listfunc getDays getYears setDecimalFormat;
 run;
 Quit;
 options cmplib = sasfunc.functions;

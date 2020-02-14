@@ -2,15 +2,16 @@
 Program Name : os_pfs.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-1-7
+Date : 2020-2-13
 SAS version : 9.4
 **************************************************************************;
-%macro OS_FUNC(input_ds, output_filename, group_var, input_years, p_value=0.05, pfs_f=0);
+%macro OS_FUNC(input_ds, output_filename, group_var, input_years, target, p_value=0.05, pfs_f=0);
     /*  *** Functional argument *** 
         input_ds : Dataset for lifetest 
         output_filename : Output file name
         group_var : Group variable
         input_years : Time variable
+        target : 
         p_value : p value
         pfs_f : pfs=1, os=0
         *** Example ***
@@ -109,18 +110,18 @@ SAS version : 9.4
             label _CENSOR_='ë≈ÇøêÿÇËíl: 0=ëùà´ÅEçƒî≠ÅEéÄñS 1=ë≈ÇøêÿÇË';
         run;
     %end;
+    /* Format a dataset */
+    %do i = 1 %to %eval(&delim_count.+1);
+        data &output_survrate._&i.;
+            set &output_survrate.;
+            temp_surv=round(SURVIVAL&i.*100, 0.1);
+            temp_lcl=round(SDF_LCL&i.*100, 0.1);
+            temp_ucl=round(SDF_UCL&i.*100, 0.1);
+            surv=cat(compress(temp_surv), ' (', compress(temp_lcl), ' - ', compress(temp_ucl),') ');
+            keep surv;
+        run;
+    %end;
     
-    proc export data=os
-        outfile="&outpath.\&output_filename..csv"
-        label
-        dbms=csv replace;
-    run;
-    proc export data=&output_survrate.
-        outfile="&outpath.\&output_survrate..csv"
-        label
-        dbms=csv replace;
-    run;
-
 %mend OS_FUNC;
 
 %macro EDIT_DS_PFS;
@@ -167,7 +168,7 @@ SAS version : 9.4
 %mend EDIT_DS_PFS;
 
 * 5.5.1. OS;
-data ds_os ds_ope_os ds_non_ope_os;
+data os_ope_group os_non_ope_group os_ope_non_chemo os_ope_chemo os_non_ope_non_chemo os_non_ope_chemo;
     set ptdata;
     /* 1:death */
     if DTHFL = 1 then do;
@@ -180,16 +181,27 @@ data ds_os ds_ope_os ds_non_ope_os;
     end;
     os_years=getYears(os_day);
     keep censor os_day os_years analysis_set analysis_group;
-    output ds_os;
     if analysis_group=&ope_group. then do;
-        output ds_ope_os;
+        output os_ope_group;
+        if analysis_set=&ope_chemo. then do;
+            output os_ope_chemo;
+        end;
+        else if analysis_set=&ope_non_chemo. then do;
+            output os_ope_non_chemo;
+        end; 
     end;
-    if analysis_group=&non_ope_group. then do;
-        output ds_non_ope_os;
+    else if analysis_group=&non_ope_group. then do;
+        output os_non_ope_group;
+        if analysis_set=&non_ope_chemo. then do;
+            output os_non_ope_chemo;
+        end;
+        else if analysis_set=&non_ope_non_chemo. then do;
+            output os_non_ope_non_chemo;
+        end; 
     end;
 run;
 * Kaplan-Meier, log-rank;
-%OS_FUNC(ds_os, _5_5_1_os_1, analysis_group, os_years);
+%OS_FUNC(ds_os, _5_5_1_os_1, analysis_group, os_years, %quote(&ope_group., &non_ope_group.));
 %OS_FUNC(ds_ope_os, _5_5_1_os_2, analysis_set, os_years);
 %OS_FUNC(ds_non_ope_os, _5_5_1_os_3, analysis_set, os_years);
 
@@ -204,7 +216,6 @@ data ds_death;
     else title = 'n';
     keep title ope_non_chemo_cnt ope_chemo_cnt non_ope_non_chemo_cnt non_ope_chemo_cnt;
 run;
-%ds2csv (data=ds_death, runmode=b, csvfile=&outpath.\_5_5_1_os_event.csv, labels=Y);
 
 * 5.5.2 PFS;
 %EDIT_DS_PFS;
@@ -226,4 +237,88 @@ run;
 data ds_pfs_event;
     set ds_death(keep=title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt) ds_exacerbation;
 run;
-%ds2csv (data=ds_pfs_event, runmode=b, csvfile=&outpath.\_5_5_2_pfs_event.csv, labels=Y);
+
+
+
+
+%macro aaa(input_ds, group, p_value=0.05, pfs_f=0);
+    /*  *** Functional argument *** 
+        input_ds : Dataset for lifetest
+        group : Group name 
+        p_value : p value
+        pfs_f : pfs=1, os=0
+        *** Example ***
+    */
+    proc lifetest  
+        data=&input_ds. stderr outsurv=temp1 noprint alpha=&p_value. plot=survival;
+        time os_day*censor(1);
+    run;
+    proc lifetest 
+        data=&input_ds. outsurv=temp2 noprint alpha=&p_value. timelist=1 2 3 reduceout;
+        time os_years*censor(1);
+    run;
+
+    data temp3;
+        set temp1;
+        temp_by=1;
+        group=&group.;
+    run;
+    data temp4;
+        set temp3;
+        by temp_by;
+        if first.temp_by=0 & last.temp_by=0 then do;
+            output;
+        end;
+    run;
+    data temp5;
+        set temp1 temp4;
+    run;
+    proc sql noprint;
+        create table temp6
+        as select * from temp5 order by os_day;
+    quit;
+    data temp_censor1;
+        set temp1;
+        where _CENSOR_=1;
+        seq=3;
+        if SURVIVAL^=. then do;
+            output;
+        end;
+    run;
+    data temp_censor2;
+        set temp_censor1(rename=(SURVIVAL=temp_survival));
+        SURVIVAL=temp_survival+0.03;
+        seq=2;
+        drop temp_survival;
+    run;
+    data temp_censor3;
+        set temp_censor1(rename=(SURVIVAL=temp_survival));
+        SURVIVAL=.;
+        seq=1;
+        drop temp_survival;
+    run;
+    data temp_censor4;
+        set temp_censor1 temp_censor2 temp_censor3;
+    run;
+    proc sql noprint;
+        create table temp_os
+        as select group, os_day, SURVIVAL, SDF_LCL, SDF_UCL from temp5 order by os_day;
+        create table temp_os_censor
+        as select group, os_day, SURVIVAL, SDF_LCL, SDF_UCL from temp_censor4 order by os_day, seq;
+        create table os_annual;
+        as select * from temp_os 
+        union 
+        select * from temp_os_censor;
+    quit;
+
+    data &input_ds._annual;
+        set temp2;
+        temp_survival=setDecimalFormat(SURVIVAL*100);
+        temp_lcl=setDecimalFormat(SDF_LCL*100);
+        temp_ucl=setDecimalFormat(SDF_UCL*100);
+        output=cat(compress(temp_survival), ' (', compress(temp_lcl), ' - ', compress(temp_ucl), ')');
+        keep output;
+    run;
+%mend;
+%aaa(os_ope_group, 'AAA');
+
