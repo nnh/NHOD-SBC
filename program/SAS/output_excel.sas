@@ -93,6 +93,11 @@ run;
 %OUTPUT_INTO_SHEET(ds_primary_site_resection, 
                      %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t006, 
                      start_row=5, start_col=2, last_col=5);
+*ëSê∂ë∂ä˙ä‘ (é°ñ¸êÿèúÇ∆é°ñ¸ñ¢êÿèú);
+%OUTPUT_INTO_SHEET(output_os_ope_group, %quote(group t os_day t SURVIVAL), f001, start_row=11, start_col=8, last_col=10);
+%OUTPUT_INTO_SHEET(output_os_non_ope_group, %quote(group t os_day t SURVIVAL), f001, start_row=11, start_col=11, last_col=13);
+%OUTPUT_INTO_SHEET(output_os_ope_non_chemo, %quote(group t os_day t SURVIVAL), f002, start_row=11, start_col=8, last_col=10);
+%OUTPUT_INTO_SHEET(output_os_ope_chemo, %quote(group t os_day t SURVIVAL), f002, start_row=11, start_col=11, last_col=13);
 *é°ó√ÇÃëtå˜äÑçá;
 %OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
 %OUTPUT_INTO_SHEET(response_ope_chemo, %quote(count t count2 t count3 t count4 t count5), t016, 

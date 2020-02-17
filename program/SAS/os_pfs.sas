@@ -5,124 +5,6 @@ Author : Ohtsuka Mariko
 Date : 2020-2-13
 SAS version : 9.4
 **************************************************************************;
-%macro OS_FUNC(input_ds, output_filename, group_var, input_years, target, p_value=0.05, pfs_f=0);
-    /*  *** Functional argument *** 
-        input_ds : Dataset for lifetest 
-        output_filename : Output file name
-        group_var : Group variable
-        input_years : Time variable
-        target : 
-        p_value : p value
-        pfs_f : pfs=1, os=0
-        *** Example ***
-        %OS_FUNC(ds_os, os_1, analysis_group, os_years);
-    */
-    %local temp_group group delim_count output_survrate;
-    %let output_survrate=&output_filename._survrate;
-    ods graphics /reset=index;
-    ods listing close;
-        ods rtf file="&outpath.\&output_filename..rtf";
-            ods noptitle;
-            %if &group_var.=. %then %do;
-                ods select survivalplot;
-                proc lifetest 
-                    data=&input_ds. stderr outsurv=os alpha=&p_value. plot=survival;
-                    time &input_years.*censor(1);
-                run;
-            %end;
-            %else %do;
-                ods select survivalplot HomTests;
-                proc lifetest  
-                    data=&input_ds. stderr outsurv=os alpha=&p_value. plot=survival;
-                    strata &group_var.;
-                    time &input_years.*censor(1);
-                run;
-            %end;
-        ods rtf close;
-    ods listing;
-    ods graphics /reset=all;
-    /* Annual survival rate */
-    ods graphics /reset=index;
-    ods listing close;
-        ods rtf file="&outpath.\temp.rtf";
-            %if &group_var.=. %then %do;
-                proc lifetest 
-                    data=&input_ds. outsurv=temp_survrate noprint alpha=&p_value. timelist=1 2 3 reduceout;
-                    time &input_years.*censor(1);
-                run;
-                %let delim_count=0;
-                %let temp_group=.;
-            %end;
-            %else %do;
-                proc lifetest 
-                    data=&input_ds. outsurv=temp_survrate noprint alpha=&p_value. timelist=1 2 3 reduceout;
-                    strata &group_var.;
-                    time &input_years.*censor(1);
-                run;
-                proc sql noprint;
-                    select distinct &group_var. into: temp_group separated by ',' from temp_survrate;
-                quit;
-                %let delim_count = %sysfunc(count("&temp_group.", %quote(,)));
-            %end;
-            %do i = 1 %to %eval(&delim_count.+1);    
-                %let group=%sysfunc(scan(%quote(&temp_group.), &i., %quote(,)));
-                %if &group_var.=. %then %do;
-                    data temp;
-                        set temp_survrate;
-                        label SURVIVAL=&non_ope_chemo.;
-                        keep TIMELIST SURVIVAL SDF_LCL SDF_UCL;
-                        rename SURVIVAL=SURVIVAL&i. SDF_LCL=SDF_LCL&i. SDF_UCL=SDF_UCL&i.;
-                    run;
-                %end;
-                %else %do;
-                    data temp;
-                        set temp_survrate;
-                        where &group_var.="&group.";
-                        label SURVIVAL="&group.";
-                        keep TIMELIST SURVIVAL SDF_LCL SDF_UCL;
-                        rename SURVIVAL=SURVIVAL&i. SDF_LCL=SDF_LCL&i. SDF_UCL=SDF_UCL&i.;
-                    run;
-                %end;
-                %if &i.=1 %then %do;
-                    data &output_survrate.;
-                        set temp;
-                    run;
-                %end;
-                %else %do;
-                    data temp_output_ds;
-                        set &output_survrate.;
-                    run;
-                    proc delete data=&output_survrate.;
-                    run;
-                    proc sql noprint;
-                        create table &output_survrate. as
-                            select A.*, B.SURVIVAL&i., B.SDF_LCL&i., B.SDF_UCL&i. from temp_output_ds A inner join temp B on A.TIMELIST = B.TIMELIST;
-                    quit;
-                %end;
-            %end;
-        ods rtf close;
-    ods listing;
-    ods graphics /reset=all;
-
-    %if &pfs_f.=1 %then %do;
-        data os;
-            set os;
-            label _CENSOR_='ë≈ÇøêÿÇËíl: 0=ëùà´ÅEçƒî≠ÅEéÄñS 1=ë≈ÇøêÿÇË';
-        run;
-    %end;
-    /* Format a dataset */
-    %do i = 1 %to %eval(&delim_count.+1);
-        data &output_survrate._&i.;
-            set &output_survrate.;
-            temp_surv=round(SURVIVAL&i.*100, 0.1);
-            temp_lcl=round(SDF_LCL&i.*100, 0.1);
-            temp_ucl=round(SDF_UCL&i.*100, 0.1);
-            surv=cat(compress(temp_surv), ' (', compress(temp_lcl), ' - ', compress(temp_ucl),') ');
-            keep surv;
-        run;
-    %end;
-    
-%mend OS_FUNC;
 
 %macro EDIT_DS_PFS;
     %local const_pfs_end_date;
@@ -238,10 +120,7 @@ data ds_pfs_event;
     set ds_death(keep=title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt) ds_exacerbation;
 run;
 
-
-
-
-%macro aaa(input_ds, group, p_value=0.05, pfs_f=0);
+%macro OS_FUNC(input_ds, group, p_value=0.05, pfs_f=0);
     /*  *** Functional argument *** 
         input_ds : Dataset for lifetest
         group : Group name 
@@ -249,34 +128,48 @@ run;
         pfs_f : pfs=1, os=0
         *** Example ***
     */
+    data temp_input;
+        set &input_ds.;
+        where os_day^=.;
+    run;
     proc lifetest  
-        data=&input_ds. stderr outsurv=temp1 noprint alpha=&p_value. plot=survival;
+        data=temp_input stderr outsurv=temp_surv noprint alpha=&p_value. plot=survival;
         time os_day*censor(1);
     run;
-    proc lifetest 
-        data=&input_ds. outsurv=temp2 noprint alpha=&p_value. timelist=1 2 3 reduceout;
-        time os_years*censor(1);
-    run;
-
-    data temp3;
-        set temp1;
-        temp_by=1;
+    proc sql noprint;
+        create table temp1
+        as select *, &group. as group from temp_surv where os_day ^= . order by os_day;
+    quit;
+    data temp1;
+        set temp_surv;
+        where os_day^=.;
         group=&group.;
+        temp_by=0;
+    run;
+    data temp3;
+        set temp1(rename=(SURVIVAL=temp_survival) drop=temp_by);
+        temp_by=1;
+        SURVIVAL=lag1(temp_survival);
+        drop temp_survival;
     run;
     data temp4;
         set temp3;
         by temp_by;
-        if first.temp_by=0 & last.temp_by=0 then do;
+/*        if first.temp_by=0 & last.temp_by=0 then do;
             output;
-        end;
+        end;*/
     run;
     data temp5;
         set temp1 temp4;
     run;
     proc sql noprint;
         create table temp6
-        as select * from temp5 order by os_day;
+        as select * from temp5 order by os_day, temp_by desc;
     quit;
+    data temp7;
+        set temp6 nobs=OBS;
+        if _N_^=1 & _N_^=OBS then output;
+    run;
     data temp_censor1;
         set temp1;
         where _CENSOR_=1;
@@ -302,16 +195,23 @@ run;
     run;
     proc sql noprint;
         create table temp_os
-        as select group, os_day, SURVIVAL, SDF_LCL, SDF_UCL from temp5 order by os_day;
+        as select group, os_day, SURVIVAL, SDF_LCL, SDF_UCL from temp7;
         create table temp_os_censor
-        as select group, os_day, SURVIVAL, SDF_LCL, SDF_UCL from temp_censor4 order by os_day, seq;
-        create table os_annual;
-        as select * from temp_os 
-        union 
-        select * from temp_os_censor;
+        as select group, os_day, SURVIVAL, SDF_LCL, SDF_UCL, seq from temp_censor4 order by os_day, seq;
+        update temp_os_censor set os_day=. where seq = 1;
     quit;
-
-    data &input_ds._annual;
+    data output_&input_ds.;
+        set temp_os temp_os_censor(drop=seq);        
+        temp_survival=setDecimalFormat(SURVIVAL*100);
+        keep group temp_survival os_day;
+        drop SURVIVAL;
+        rename temp_survival=survival;
+    run;
+    proc lifetest 
+        data=temp_input outsurv=temp2 noprint alpha=&p_value. timelist=1 2 3 reduceout;
+        time os_years*censor(1);
+    run;
+    data output_&input_ds._annual;
         set temp2;
         temp_survival=setDecimalFormat(SURVIVAL*100);
         temp_lcl=setDecimalFormat(SDF_LCL*100);
@@ -319,6 +219,9 @@ run;
         output=cat(compress(temp_survival), ' (', compress(temp_lcl), ' - ', compress(temp_ucl), ')');
         keep output;
     run;
-%mend;
-%aaa(os_ope_group, 'AAA');
+%mend OS_FUNC;
+%OS_FUNC(os_ope_group, &ope_group.);
+%OS_FUNC(os_non_ope_group, &non_ope_group.);
+%OS_FUNC(os_ope_non_chemo, &ope_non_chemo.);
+%OS_FUNC(os_ope_chemo, &non_ope_chemo.);
 
