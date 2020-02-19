@@ -6,6 +6,23 @@ Date : 2020-02-12
 SAS version : 9.4
 **************************************************************************;
 * 5.5.3. Response rate of treatment;
+%macro GET_FORMAT_LENGTH(format_name);
+    /*  *** Functional argument ***  
+        format_name : format name
+        *** Example ***
+        %GET_FORMAT_LENGTH(FMT_18_F);
+    */
+    %global format_length;
+    proc format library=libads cntlout=temp_fmt_len;
+        select &format_name.;
+    run;
+    data _NULL_;
+        set temp_fmt_len;
+        if _N_=1 then do;
+            call symput('format_length', cat("&format_name.", LENGTH));
+        end;
+    run;
+%mend GET_FORMAT_LENGTH;
 %macro EDIT_RESPONSE(input_ds, key_col, output_ds);
     /*  *** Functional argument ***  
         input_ds : Input dataset

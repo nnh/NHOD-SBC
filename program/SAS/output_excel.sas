@@ -43,6 +43,62 @@ SAS version : 9.4
     run;
 
 %mend OUTPUT_INTO_SHEET;
+%macro OUTPUT_INTO_SHEET_OS(input_ds, target_str1, target_str2, target_sheet, start_row, start_col, last_col, key_var);
+    %local row_count output_flg;
+    proc sql noprint;
+        select count(*) into:row_count trimmed from &input_ds.;
+    quit;
+    %do i = 1 %to %eval(&row_count.);
+        data temp;
+            set &input_ds.;
+            if _N_=&i. then do;
+                call symput('output_flg', input(&key_var., best12.));
+                output;
+            end;
+        run;
+        %if &output_flg.^=. %then %do;
+            %OUTPUT_INTO_SHEET(temp, &target_str1., &target_sheet., start_row=%eval(&start_row.+&i.), start_col=&start_col., last_col=&last_col.);
+        %end;
+        %else %do;
+            %OUTPUT_INTO_SHEET(temp, &target_str2., &target_sheet., start_row=%eval(&start_row.+&i.), start_col=&start_col., last_col=&start_col.);
+        %end;
+
+    %end;
+%mend OUTPUT_INTO_SHEET_OS;
+%macro OUTPUT_OS(sheet_name, annual_sheet_name, output_control_group=1);
+    %local os_p_value_row os_p_value_col os_graph_data_source_start_row os_graph_data_source_start_col_1
+           os_graph_data_source_start_col_2 os_graph_data_source_end_col_2 os_n_row os_n_col1 os_n_col2;
+    %let os_p_value_row=7;
+    %let os_p_value_col=2;
+    %let os_graph_data_source_start_row=10;
+    %let os_graph_data_source_start_col_1=8;
+    %let os_graph_data_source_end_col_1=10;
+    %let os_graph_data_source_start_col_2=11;
+    %let os_graph_data_source_end_col_2=13;
+    %let os_n_row=5;
+    %let os_annual_row=6;
+    %let os_n_col1=2;
+    %let os_n_col2=3;
+    %OUTPUT_INTO_SHEET_OS(output_lifetest_&sheet_name._1, %quote(group t os_day t SURVIVAL), %quote(group), &sheet_name., 
+                            &os_graph_data_source_start_row., &os_graph_data_source_start_col_1., 
+                            &os_graph_data_source_end_col_1., %quote(os_day));
+    %OUTPUT_INTO_SHEET(lifetest_&sheet_name._n_1, %quote(count), &annual_sheet_name., start_row=&os_n_row., 
+                         start_col=&os_n_col1., last_col=&os_n_col1.);
+    %OUTPUT_INTO_SHEET(lifetest_&sheet_name._annual_1, %quote(output), &annual_sheet_name., start_row=&os_annual_row., 
+                         start_col=&os_n_col1., last_col=&os_n_col1.);
+    %if &output_control_group.=1 %then %do;
+        %OUTPUT_INTO_SHEET(homtests_lifetest_&sheet_name., %quote(ProbChiSq), &sheet_name., start_row=&os_p_value_row., 
+                             start_col=&os_p_value_col., last_col=&os_p_value_col.);
+        %OUTPUT_INTO_SHEET_OS(output_lifetest_&sheet_name._2, %quote(group t os_day t SURVIVAL), %quote(group), &sheet_name., 
+                                &os_graph_data_source_start_row., &os_graph_data_source_start_col_2., 
+                                &os_graph_data_source_end_col_2., %quote(os_day));
+        %OUTPUT_INTO_SHEET(lifetest_&sheet_name._n_2, %quote(count), &annual_sheet_name., start_row=&os_n_row., 
+                             start_col=&os_n_col2., last_col=&os_n_col2.);
+        %OUTPUT_INTO_SHEET(lifetest_&sheet_name._annual_2, %quote(output), &annual_sheet_name., start_row=&os_annual_row., 
+                             start_col=&os_n_col2., last_col=&os_n_col2.);
+    %end;
+
+%mend OUTPUT_OS;
 
 options noxwait noxsync;
 %let templatepath=C:\Users\Mariko;
@@ -93,53 +149,18 @@ run;
 %OUTPUT_INTO_SHEET(ds_primary_site_resection, 
                      %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t006, 
                      start_row=5, start_col=2, last_col=5);
-*ëSê∂ë∂ä˙ä‘ (é°ñ¸êÿèúÇ∆é°ñ¸ñ¢êÿèú);
-%macro OUTPUT_INTO_SHEET_OS(input_ds, target_str1, target_str2, target_sheet, start_row, start_col, last_col, key_var);
-    %local row_count output_flg;
-    proc sql noprint;
-        select count(*) into:row_count trimmed from &input_ds.;
-    quit;
-    %do i = 1 %to %eval(&row_count.);
-        data temp;
-            set &input_ds.;
-            if _N_=&i. then do;
-                call symput('output_flg', input(&key_var., best12.));
-                output;
-            end;
-        run;
-        %if &output_flg.^=. %then %do;
-            %OUTPUT_INTO_SHEET(temp, &target_str1., &target_sheet., start_row=%eval(&start_row.+&i.), start_col=&start_col., last_col=&last_col.);
-        %end;
-        %else %do;
-            %OUTPUT_INTO_SHEET(temp, &target_str2., &target_sheet., start_row=%eval(&start_row.+&i.), start_col=&start_col., last_col=&start_col.);
-        %end;
-
-    %end;
-%mend OUTPUT_INTO_SHEET_OS;
-%OUTPUT_INTO_SHEET(homtests_lifetest_f001, %quote(ProbChiSq), f001, start_row=2, start_col=7, last_col=7);
-%OUTPUT_INTO_SHEET_OS(output_lifetest_f001_1, %quote(group t os_day t SURVIVAL), %quote(group), f001, 10, 8, 10, %quote(os_day));
-%OUTPUT_INTO_SHEET_OS(output_lifetest_f001_2, %quote(group t os_day t SURVIVAL), %quote(group), f001, 10, 11, 13, %quote(os_day));
-%OUTPUT_INTO_SHEET(homtests_lifetest_f002, %quote(ProbChiSq), f002, start_row=2, start_col=7, last_col=7);
-%OUTPUT_INTO_SHEET_OS(output_lifetest_f002_1, %quote(group t os_day t SURVIVAL), %quote(group), f002, 10, 8, 10, %quote(os_day));
-%OUTPUT_INTO_SHEET_OS(output_lifetest_f002_2, %quote(group t os_day t SURVIVAL), %quote(group), f002, 10, 11, 13, %quote(os_day));
-%OUTPUT_INTO_SHEET(homtests_lifetest_f003, %quote(ProbChiSq), f003, start_row=2, start_col=7, last_col=7);
-%OUTPUT_INTO_SHEET_OS(output_lifetest_f003_1, %quote(group t os_day t SURVIVAL), %quote(group), f003, 10, 8, 10, %quote(os_day));
-%OUTPUT_INTO_SHEET_OS(output_lifetest_f003_2, %quote(group t os_day t SURVIVAL), %quote(group), f003, 10, 11, 13, %quote(os_day));
-%OUTPUT_INTO_SHEET(lifetest_f001_n_1, %quote(count), t007, start_row=5, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(lifetest_f001_n_2, %quote(count), t007, start_row=5, start_col=3, last_col=3);
-%OUTPUT_INTO_SHEET(Lifetest_f001_annual_1, %quote(output), t007, start_row=6, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(Lifetest_f001_annual_2, %quote(output), t007, start_row=6, start_col=3, last_col=3);
-%OUTPUT_INTO_SHEET(lifetest_f002_n_1, %quote(count), t008, start_row=5, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(lifetest_f002_n_2, %quote(count), t008, start_row=5, start_col=3, last_col=3);
-%OUTPUT_INTO_SHEET(Lifetest_f002_annual_1, %quote(output), t008, start_row=6, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(Lifetest_f002_annual_2, %quote(output), t008, start_row=6, start_col=3, last_col=3);
-%OUTPUT_INTO_SHEET(Lifetest_f003_annual_1, %quote(output), t009, start_row=6, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(Lifetest_f003_annual_2, %quote(output), t009, start_row=6, start_col=3, last_col=3);
-%OUTPUT_INTO_SHEET(lifetest_f003_n_1, %quote(count), t009, start_row=5, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(lifetest_f003_n_2, %quote(count), t009, start_row=5, start_col=3, last_col=3);
+*ëSê∂ë∂ä˙ä‘;
+%OUTPUT_OS(f001, t007);
+%OUTPUT_OS(f002, t008);
+%OUTPUT_OS(f003, t009);
 %OUTPUT_INTO_SHEET(t010_n, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t010, start_row=5, start_col=2, last_col=5);
 %OUTPUT_INTO_SHEET(t010, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t010, start_row=6, start_col=2, last_col=5);
-
+*ñ≥ëùà´ê∂ë∂ä˙ä‘;
+%OUTPUT_OS(f004, t011);
+%OUTPUT_OS(f005, t012);
+%OUTPUT_OS(f006, t013, output_control_group=0);
+%OUTPUT_INTO_SHEET(t014_n, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_chemo_cnt), t014, start_row=5, start_col=2, last_col=5);
+%OUTPUT_INTO_SHEET(t014, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_chemo_cnt), t014, start_row=6, start_col=2, last_col=5);
 *é°ó√ÇÃëtå˜äÑçá;
 %OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
 %OUTPUT_INTO_SHEET(response_ope_chemo, %quote(count t count2 t count3 t count4 t count5), t016, 

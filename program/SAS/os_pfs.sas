@@ -11,6 +11,7 @@ SAS version : 9.4
         set &input_ds.;
         where os_day^=.;
     run;
+    ods listing close;
     ods output HomTests=temp_homtests;
     proc lifetest  
         data=temp_input stderr outsurv=temp_surv alpha=&p_value.;
@@ -67,6 +68,36 @@ SAS version : 9.4
         end;
     run;
 %mend EXEC_LIFETEST_1;
+%macro EXEC_LIFETEST_2(input_ds, output_ds, target_1, p_value=0.05);
+    data temp_input;
+        set &input_ds.;
+        where os_day^=.;
+    run;
+    ods listing close;
+    proc lifetest  
+        data=temp_input stderr outsurv=&output_ds._1 alpha=&p_value.;
+        time os_day*censor(1);
+    run;
+    %OS_FUNC_1(&output_ds._1, &target_1.);
+    /* Annual overall survival */
+    proc lifetest 
+        data=temp_input outsurv=&output_ds._annual_1 alpha=&p_value. timelist=1 2 3 reduceout;
+        time os_years*censor(1);
+    run;
+    data temp_surv_timelist_annual;
+        set temp_surv_timelist;
+        temp_survival=setDecimalFormat(SURVIVAL*100);
+        temp_lcl=setDecimalFormat(SDF_LCL*100);
+        temp_ucl=setDecimalFormat(SDF_UCL*100);
+        output=cat(compress(temp_survival), ' (', compress(temp_lcl), ' - ', compress(temp_ucl), ')');
+        keep output;
+    run;
+    proc sql noprint;
+        create table temp_&output_ds._n_1
+        as select count(*) as count from temp_input;
+    quit;
+    %EDIT_N(temp_&output_ds._n_1, &output_ds._n_1);
+%mend EXEC_LIFETEST_2;
 
 %macro OS_FUNC_1(input_ds, group);
     /*  *** Functional argument *** 
@@ -149,18 +180,6 @@ SAS version : 9.4
         drop SURVIVAL;
         rename temp_survival=survival temp_os_day=os_day;
     run;
-/*    proc lifetest 
-        data=temp_input outsurv=temp2 noprint alpha=&p_value. timelist=1 2 3 reduceout;
-        time os_years*censor(1);
-    run;
-    data output_&input_ds._annual;
-        set temp2;
-        temp_survival=setDecimalFormat(SURVIVAL*100);
-        temp_lcl=setDecimalFormat(SDF_LCL*100);
-        temp_ucl=setDecimalFormat(SDF_UCL*100);
-        output=cat(compress(temp_survival), ' (', compress(temp_lcl), ' - ', compress(temp_ucl), ')');
-        keep output;
-    run;*/
 %mend OS_FUNC_1;
 
 %macro EDIT_DS_PFS;
@@ -227,24 +246,6 @@ data os_all os_ope_group os_non_ope_group;
     else if analysis_group=&non_ope_group. then do;
         output os_non_ope_group;
     end;
-/*    if analysis_group=&ope_group. then do;
-        output os_ope_group;
-        if analysis_set=&ope_chemo. then do;
-            output os_ope_chemo;
-        end;
-        else if analysis_set=&ope_non_chemo. then do;
-            output os_ope_non_chemo;
-        end; 
-    end;
-    else if analysis_group=&non_ope_group. then do;
-        output os_non_ope_group;
-        if analysis_set=&non_ope_chemo. then do;
-            output os_non_ope_chemo;
-        end;
-        else if analysis_set=&non_ope_non_chemo. then do;
-            output os_non_ope_non_chemo;
-        end; 
-    end;*/
 run;
 * Kaplan-Meier, log-rank;
 %EXEC_LIFETEST_1(os_all, lifetest_f001, analysis_group, &ope_group., &non_ope_group.);
@@ -269,10 +270,48 @@ run;
 
 * 5.5.2 PFS;
 %EDIT_DS_PFS;
-/*%OS_FUNC(ds_pfs, _5_5_2_pfs_1, analysis_group, pfs_years, pfs_f=1);
-%OS_FUNC(ds_ope_pfs, _5_5_2_pfs_2, analysis_set, pfs_years, pfs_f=1);
-%OS_FUNC(ds_non_ope_chemo_pfs, _5_5_2_pfs_3, ., pfs_years, pfs_f=1);*/
-
+/* Set initial value of end date to future date */
+%let const_pfs_end_date=today()+1;
+data ds_pfs;
+    set ptdata;
+    format os_day best12. os_years best12. pfs_start_date yymmdd10. pfs_end_date yymmdd10. censor best12.;
+    /* Starting date */
+    select (analysis_set);
+        when (&ope_chemo., &ope_non_chemo.) do;
+            pfs_start_date=resectionDTC;
+        end;
+        when (&non_ope_chemo.) do;
+            pfs_start_date=chemSTDTC;
+        end;
+        when (&non_ope_non_chemo.) do;
+            pfs_start_date=DIGDTC;
+        end;
+        otherwise call missing(pfs_start_date);
+    end;
+run;
+proc sql noprint;
+    /* Initial value */
+    update ds_pfs set pfs_end_date = &const_pfs_end_date., censor = 1;
+    /* In case of death set the date of death */
+    update ds_pfs set pfs_end_date = DTHDTC, censor = 0 where DTHFL= '1';
+    /* Update if exacerbation date is earlier than death date */
+    update ds_pfs set pfs_end_date = RECURRDTC, censor = 0 where (RECURRYN = 2) and (RECURRDTC < pfs_end_date);
+    /* Survival confirmation date */
+    update ds_pfs set pfs_end_date = SURVDTC where (DTHFL ne '1') and (RECURRYN ne 2) and (pfs_start_date ne .) and (pfs_end_date ne .);
+    update ds_pfs set os_day = getDays(pfs_start_date, pfs_end_date), os_years = getYears(getDays(pfs_start_date, pfs_end_date));
+quit;
+data ds_ope_pfs ds_non_ope_chemo_pfs;
+    set ds_pfs;
+    if analysis_group=&ope_group. then do;
+        output ds_ope_pfs;
+    end;
+    if analysis_set=&non_ope_chemo. then do;
+        output ds_non_ope_chemo_pfs;
+    end;
+run;
+%EXEC_LIFETEST_1(ds_pfs, lifetest_f004, analysis_group, &ope_group., &non_ope_group.);
+%EXEC_LIFETEST_1(ds_ope_pfs, lifetest_f005, analysis_set, &ope_non_chemo., &ope_chemo.);
+%EXEC_LIFETEST_2(ds_non_ope_chemo_pfs, lifetest_f006, &non_ope_chemo.);
 * event;
 %CREATE_OUTPUT_DS(output_ds=ds_exacerbation, items_label='イベント');
 proc contents data=ds_exacerbation out=ds_colnames varnum noprint; run;
@@ -280,10 +319,11 @@ proc contents data=ds_exacerbation out=ds_colnames varnum noprint; run;
 data ds_exacerbation;
     set ds_exacerbation;
     where items='あり';
-    if _N_=1 then title='増悪・再発';
-    keep title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt;
+    keep ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt;
 run;
-
-data ds_pfs_event;
-    set ds_death(keep=title ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt) ds_exacerbation;
+data t014_n;
+    set t010_n(keep=ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt);
+run;
+data t014;
+    set t010(keep=ope_non_chemo_cnt ope_chemo_cnt non_ope_chemo_cnt) ds_exacerbation;
 run;
