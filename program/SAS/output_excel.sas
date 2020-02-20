@@ -99,6 +99,15 @@ SAS version : 9.4
     %end;
 
 %mend OUTPUT_OS;
+%macro OUTPUT_INTO_SHEET_RESPONSE(input_ds_head, input_col, sheet_name, start_row, start_col, max_index);
+    %local i target_col;
+    %do i=1 %to &max_index.;
+        %let target_col=%eval(&start_col. - 1 + &i.); 
+        %OUTPUT_INTO_SHEET(&input_ds_head.&i._n, %quote(&input_col.), &sheet_name., start_row=&start_row., start_col=&target_col., last_col=&target_col.);
+        %CAT_COUNT_AND_PERCENT(&input_ds_head.&i., &input_col., output_col, ds_response);
+        %OUTPUT_INTO_SHEET(ds_response, output_col, &sheet_name., start_row=%eval(&start_row.+1), start_col=&target_col., last_col=&target_col.);
+    %end;
+%mend OUTPUT_INTO_SHEET_RESPONSE;
 
 options noxwait noxsync;
 %let templatepath=C:\Users\Mariko;
@@ -139,16 +148,27 @@ run;
 *複数の原発癌に関する記述;
 %OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid t MHCOM), l001, start_row=4, start_col=1, last_col=8);
 *手術の根治度 (癌遺残);
-%OUTPUT_INTO_SHEET(ds_surgical_curability, %quote(ope_non_chemo_cnt t ope_chemo_cnt), t003, start_row=5, start_col=2,
-                     last_col=3);
+%OUTPUT_INTO_SHEET(ds_surgical_curability_n, %quote(ope_non_chemo_cnt t ope_chemo_cnt), t003, start_row=5, start_col=2, last_col=3);
+%CAT_COUNT_AND_PERCENT(ds_surgical_curability, ope_non_chemo_cnt, ope_non_chemo, ds_t003);
+%CAT_COUNT_AND_PERCENT(ds_t003, ope_chemo_cnt, ope_chemo, ds_t003);
+%OUTPUT_INTO_SHEET(ds_t003, %quote(ope_non_chemo t ope_chemo), t003, start_row=6, start_col=2, last_col=3);
 *アジュバント化学療法レジメン;
-%OUTPUT_INTO_SHEET(ds_adjuvant_chemo_regimen, %quote(ope_chemo_cnt), t004, start_row=5, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(ds_adjuvant_chemo_regimen_n, %quote(ope_chemo_cnt), t004, start_row=5, start_col=2, last_col=2);
+%CAT_COUNT_AND_PERCENT(ds_adjuvant_chemo_regimen, ope_chemo_cnt, ope_chemo, ds_t004);
+%OUTPUT_INTO_SHEET(ds_t004, %quote(ope_chemo), t004, start_row=6, start_col=2, last_col=2);
 *第一選択化学療法レジメン;
-%OUTPUT_INTO_SHEET(ds_first_line_chemo_regimen, %quote(non_ope_chemo_cnt), t005, start_row=5, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(ds_first_line_chemo_regimen_n, %quote(non_ope_chemo_cnt), t005, start_row=5, start_col=2, last_col=2);
+%CAT_COUNT_AND_PERCENT(ds_first_line_chemo_regimen, non_ope_chemo_cnt, non_ope_chemo, ds_t005);
+%OUTPUT_INTO_SHEET(ds_t005, %quote(non_ope_chemo), t005, start_row=6, start_col=2, last_col=2);
 *原発巣切除の有無;
-%OUTPUT_INTO_SHEET(ds_primary_site_resection, 
-                     %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), t006, 
-                     start_row=5, start_col=2, last_col=5);
+%OUTPUT_INTO_SHEET(ds_primary_site_resection_n, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_non_chemo_cnt t non_ope_chemo_cnt), 
+                     t006, start_row=5, start_col=2, last_col=5);
+%CAT_COUNT_AND_PERCENT(ds_primary_site_resection, ope_non_chemo_cnt, ope_non_chemo, ds_t006);
+%CAT_COUNT_AND_PERCENT(ds_t006, ope_chemo_cnt, ope_chemo, ds_t006);
+%CAT_COUNT_AND_PERCENT(ds_t006, non_ope_non_chemo_cnt, non_ope_non_chemo, ds_t006);
+%CAT_COUNT_AND_PERCENT(ds_t006, non_ope_chemo_cnt, non_ope_chemo, ds_t006);
+%OUTPUT_INTO_SHEET(ds_t006, %quote(ope_non_chemo t ope_chemo t non_ope_non_chemo t non_ope_chemo), t006, 
+                     start_row=6, start_col=2, last_col=5);
 *全生存期間;
 %OUTPUT_OS(f001, t007);
 %OUTPUT_OS(f002, t008);
@@ -162,11 +182,12 @@ run;
 %OUTPUT_INTO_SHEET(t014_n, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_chemo_cnt), t014, start_row=5, start_col=2, last_col=5);
 %OUTPUT_INTO_SHEET(t014, %quote(ope_non_chemo_cnt t ope_chemo_cnt t non_ope_chemo_cnt), t014, start_row=6, start_col=2, last_col=5);
 *治療の奏功割合;
-%OUTPUT_INTO_SHEET(response_ope_non_chemo, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
-%OUTPUT_INTO_SHEET(response_ope_chemo, %quote(count t count2 t count3 t count4 t count5), t016, 
-                     start_row=5, start_col=2, last_col=7);
-%OUTPUT_INTO_SHEET(response_non_ope_chemo, %quote(count t count2 t count3 t count4 t count5 t count6 t count7 t count8 t count9 t count10 t count11), t017, 
-                     start_row=5, start_col=2, last_col=12);
+%OUTPUT_INTO_SHEET(response_ope_non_chemo_n, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
+%CAT_COUNT_AND_PERCENT(response_ope_non_chemo, ope_non_chemo_cnt, ope_non_chemo, ds_t015);
+%OUTPUT_INTO_SHEET(ds_t015, %quote(ope_non_chemo), t015, start_row=6, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET(response_ope_non_chemo_n, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
+%OUTPUT_INTO_SHEET_RESPONSE(output_res_ope_chemo, ope_chemo_cnt, t016, 5, 2, 5);
+%OUTPUT_INTO_SHEET_RESPONSE(output_res_non_ope_chemo, non_ope_chemo_cnt, t017, 5, 2, 10);
 *腫瘍の縮小率;
 %OUTPUT_INTO_SHEET(ds_t018, %quote(non_ope_chemo_cnt t Lesion3m t Lesion6m), t018, start_row=5, start_col=2, last_col=4);
 *治療による有害事象;

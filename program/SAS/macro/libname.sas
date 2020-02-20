@@ -312,10 +312,11 @@ options fmtsearch=(libads);
  
     %GET_FORMAT(ds_colnames, 'items');
     data temp_output;
-        format title items &str_format..;
+        *format title items &str_format..;
+        format items &str_format..;
         merge temp1-temp&demog_group_count.;
         by temp_items;
-        if _N_=1 then do; title=&title.; end;
+        /*if _N_=1 then do; title=&title.; end;*/
         items=temp_items;
         drop temp_items;
     run;
@@ -342,16 +343,20 @@ options fmtsearch=(libads);
         *** Example ***
         %MEANS_FUNC(title='îNóÓ', var_var=AGE);
     */
+    data temp_input_ds;
+        set &input_ds.;
+        where &var_var. is not missing;
+    run;
     %local select_str columns;
     %let columns = %str(n=n mean=temp_mean std=temp_std median=median q1=q1 q3=q3 min=min max=max);
     /* Calculation of summary statistics (overall) */
-    proc means data=&input_ds. noprint;
+    proc means data=temp_input_ds noprint;
         var &var_var.;
         output out=temp_all_ds &columns.;
     run;
     %EDIT_DS_ALL;
     /* Calculation of summary statistics */
-    proc means data=&input_ds. noprint;
+    proc means data=temp_input_ds noprint;
         class &cat_var.;
         var &var_var.;
         output out=temp_ds  &columns.;
@@ -385,49 +390,9 @@ options fmtsearch=(libads);
         insert into &output_ds. select &title., * from tran_means where _NAME_='n';
         insert into &output_ds. select '', * from tran_means where _NAME_ NE 'n';
     quit;
-    /* Delete the working dataset */
-    proc datasets lib=work nolist; delete temp_all_ds temp_ds temp_means tran_means; run; quit;
 
 %mend MEANS_FUNC;
-%macro JOIN_TO_TEMPLATE(input_ds, output_ds, output_cols, join_key_colname, template_rows, select_str);
-    /*  *** Functional argument ***  
-        input_ds : Input dataset
-        output_ds : Output dataset
-        output_cols : Output dataset columns
-        join_key_colname : Left join key
-        template_rows : Output dataset rows
-        select_str : Select statement text
-        *** Example ***
-        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, %quote(items char(2), count num), items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'), %quote(B.ope_non_chemo_cnt label="é°ó√Ç»Çµ"));
-    */
-    %local i delim_count temp_col temp_insert_str insert_str_delim_count;
-    /* Count delimiters and get number of observations */
-    %let delim_count = %sysfunc(count(&template_rows., %quote(,)));
-    %let insert_str_delim_count = %sysfunc(count(&select_str., %quote(,)));
-    data _NULL_;
-        call symput('temp_insert_str', repeat(".,", &insert_str_delim_count.));
-    run;
-    /* Create an observation for the argument output_cols in the template dataset and add the variable seq for sorting */
-    proc sql noprint;
-        create table template_ds
-            (&output_cols., seq num);
-        %do i = 1 %to %eval(&delim_count.+1);
-            %let temp_col=%sysfunc(scan(&template_rows, &i., %quote(,)));
-            *insert into template_ds values(&temp_col., ., &i.);
-            insert into template_ds values(&temp_col., &temp_insert_str. &i.);
-        %end;
-    quit;
-    /* Merge template dataset and input dataset and sort in seq order */
-    proc sql noprint;
-        create table &output_ds. as
-            select A.seq, A.&join_key_colname., &select_str. from template_ds A left join &input_ds. B on A.&join_key_colname. = B.&join_key_colname. order by seq;
-    quit;
-    /* Delete variable seq */
-    proc sql noprint;
-        alter table &output_ds. drop seq;
-    quit;
-%mend JOIN_TO_TEMPLATE;
-%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog, input_ds=ptdata, output_n_flg=1, contents=ptdata_contents);
+%macro FORMAT_FREQ(var, item_list, title, output_ds=ds_demog, input_ds=ptdata, output_n_flg=1, contents=ptdata_contents, cat_var=analysis_set);
     /*  *** Functional argument *** 
         var : Target variable
         item_list : Output these to items
@@ -439,47 +404,62 @@ options fmtsearch=(libads);
         *** Example ***
         %FORMAT_FREQ(CrohnYN, %quote('Ç†ÇË', 'Ç»Çµ', 'ïsñæ'), 'ÉNÉçÅ[Éìïa');
     */
-    %local output_cols select_str;
-    %let output_cols=%quote(items char(100), all_cnt num, all_per num, ope_non_chemo_cnt num, ope_chemo_cnt num, non_ope_non_chemo_cnt num, non_ope_chemo_cnt num, ope_non_chemo_per num, ope_chemo_per num, non_ope_non_chemo_per num, non_ope_chemo_per num);
-    %let select_str=%quote(B.all_cnt label=&all_group., B.all_per label=&all_group., B.ope_non_chemo_cnt label=&ope_non_chemo., B.ope_non_chemo_per label=&ope_non_chemo., B.ope_chemo_cnt label=&ope_chemo., B.ope_chemo_per label=&ope_chemo., B.non_ope_non_chemo_cnt label=&non_ope_non_chemo., B.non_ope_non_chemo_per label=&non_ope_non_chemo.,  B.non_ope_chemo_cnt label=&non_ope_chemo., B.non_ope_chemo_per label=&non_ope_non_chemo.);
-    %CREATE_OUTPUT_DS(output_ds=temp_n, insert_n_flg=1);
+    data temp_input_ds;
+        set &input_ds.;
+        where &var. is not missing;
+    run;
+    %CREATE_DS_N(temp_input_ds, temp_ds_N);
+    %CREATE_OUTPUT_DS(output_ds=temp_n, insert_n_flg=1, input_n=temp_ds_N);
     data temp_n;
-        set temp_n(drop=title);
+        set temp_n;
+        drop title;
     run;
     %CREATE_OUTPUT_DS(output_ds=temp_freq);
-    %FREQ_FUNC(input_ds=&input_ds., title=&title., var_var=&var., output_ds=temp_freq, contents=&contents.);
-    %JOIN_TO_TEMPLATE(temp_freq, ds_join, %quote(&output_cols.), items, %quote(&item_list.), %quote(&select_str.));
-    data ds_join;
-        set temp_n ds_join;
+    %FREQ_FUNC(input_ds=temp_input_ds, title=&title., cat_var=&cat_var., var_var=&var., output_ds=temp_freq, contents=&contents.);
+    option DKROCOND=nowarn;
+    data temp_freq_items;
+        set temp_freq;
+        where items is not missing;
+        drop title;
     run;
-    /* Create and join title dataset */
-    data ds_title;
-        attrib
-            title length=$100 format=$100.
-            items length=$100 format=$100.
-            seq format=best12.;
-        if _N_=1 then do;
-            title=&title.;
-        end;
-        if &output_n_flg.=1 then do;
-            set ds_join(keep=items);
-        end;
-        else do;
-            set ds_join(keep=items);
-            where items^='n';
-        end;
-        seq=_N_;
-    run;
-    proc sql noprint;
-        create table temp_ds_demog as
-            select A.title, B.* from ds_title A left join ds_join B on A.items = B.items order by A.seq; 
-    quit;
-    /* Vertically join with output dataset */
+    option DKROCOND=error;
+    %JOIN_TO_TEMPLATE(temp_freq_items, ds_join, items, %quote(&item_list.));
     data &output_ds.;
-        set &output_ds. temp_ds_demog;
+        set &output_ds. temp_n ds_join;
+        title=.;
+        keep title items all_cnt all_per ope_non_chemo_cnt ope_non_chemo_per ope_chemo_cnt ope_chemo_per 
+             non_ope_non_chemo_cnt non_ope_non_chemo_per non_ope_chemo_cnt non_ope_chemo_per;
     run;
 
 %mend FORMAT_FREQ;
+%macro JOIN_TO_TEMPLATE(input_ds, output_ds, join_key_colname, template_rows);
+    /*  *** Functional argument ***  
+        input_ds : Input dataset
+        output_ds : Output dataset
+        join_key_colname : Left join key
+        template_rows : Output dataset rows
+        *** Example ***
+        %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'));
+    */
+    %local delim_count i temp_col;
+    %let delim_count = %sysfunc(count(&template_rows., %quote(,)));
+    proc sql noprint;
+        create table template_ds (temp_key char(100), seq num);
+        %do i = 1 %to %eval(&delim_count.+1);
+            %let temp_col=%sysfunc(scan(&template_rows, &i., %quote(,)));
+            insert into template_ds values(&temp_col., &i.);
+        %end;
+    quit;
+    proc sql noprint;
+        create table temp_ds as 
+            select * from template_ds A left join &input_ds. B on A.temp_key = B.&join_key_colname. order by seq;
+    quit;
+    data &output_ds.;
+        set temp_ds;
+        drop &join_key_colname.;
+        rename temp_key= &join_key_colname.;
+    run;
+%mend;
 %macro DELETE_PER(target_ds);
     /*  *** Functional argument *** 
         target_ds : dataset
@@ -491,28 +471,19 @@ options fmtsearch=(libads);
             set all_per=., ope_non_chemo_per=., ope_chemo_per=., non_ope_non_chemo_per=., non_ope_chemo_per=.;
     quit;
 %mend DELETE_PER;
-%macro EDIT_TREATMENT(output_ds, var, items_list, keep_list, input_ds=ptdata);
-    %CREATE_OUTPUT_DS(output_ds=temp_treatment);
-    %FORMAT_FREQ(&var., &items_list., '', output_ds=temp_treatment, input_ds=&input_ds., output_n_flg=1);
-    data temp1;
-        set temp_treatment;
-        keep &keep_list.;
-    run;
-    data temp2 temp3;
-        set temp1;
+%macro EDIT_TREATMENT(output_ds, var, items_list, input_ds=ptdata);
+    %CREATE_OUTPUT_DS(output_ds=temp_&output_ds., items_label='');
+    %FORMAT_FREQ(&var., &items_list., output_ds=temp_&output_ds., input_ds=&input_ds.);
+    data &output_ds. temp_n;
+        set temp_&output_ds.;
         if _N_=1 then do;
-            output temp2;
+            output temp_n;
         end;
         else do;
-            output temp3;
+            output &output_ds.;    
         end;
     run;
-    %EDIT_N(temp2, temp4);
-    %EDIT_N(temp3, temp5, pattern_f=1);
-    data &output_ds.;
-        set temp4 temp5;
-    run;
-
+    %EDIT_N(temp_n, &output_ds._n);
 %mend EDIT_TREATMENT;
 %macro EDIT_N(input_ds, output_ds, pattern_f=0);
     %local var_cnt dsid rc i;
@@ -547,6 +518,30 @@ options fmtsearch=(libads);
         set temp_ds;
     run;
 %mend;
+%macro CREATE_DS_N(input_ds, output_ds); 
+    %local count_n;
+    proc sql noprint;
+        create table &output_ds. (Item char(200), Category char(200), count num, percent num);
+        select count(*) into: count_n from &input_ds.;
+        insert into &output_ds. values('âêÕëŒè€èWícÇÃì‡ñÛ', 'ìoò^êî', &count_n., 100);
+    quit;
+    %EXEC_FREQ(&input_ds., efficacy, efficacy);
+    %EXEC_FREQ(&input_ds., safety, safety);
+    %EXEC_FREQ(&input_ds., analysis_set, analysis_set);
+    %EXEC_FREQ(&input_ds., analysis_group, analysis_group);
+    data analysis; 
+        set analysis_set(rename=(analysis_set=analysis))
+        analysis_group(rename=(analysis_group=analysis));
+    run;
+    %INSERT_SQL(safety, &output_ds., %str('', 'à¿ëSê´âêÕëŒè€èWíc', count, percent), %str(safety=1));
+    %INSERT_SQL(efficacy, &output_ds., %str('', &efficacy_group., count, percent), %str(efficacy=1));
+    %INSERT_SQL(analysis, &output_ds., %str('', &ope_group., count, percent), %str(analysis=)&ope_group.);
+    %INSERT_SQL(analysis, &output_ds., %str('', &ope_non_chemo., count, percent), %str(analysis=)&ope_non_chemo.);
+    %INSERT_SQL(analysis, &output_ds., %str('', &ope_chemo., count, percent), %str(analysis=)&ope_chemo.);
+    %INSERT_SQL(analysis, &output_ds., %str('', &non_ope_group., count, percent), %str(analysis=)&non_ope_group.);
+    %INSERT_SQL(analysis, &output_ds., %str('', &non_ope_non_chemo., count, percent), %str(analysis=)&non_ope_non_chemo.);
+    %INSERT_SQL(analysis, &output_ds., %str('', &non_ope_chemo., count, percent), %str(analysis=)&non_ope_chemo.);
+%mend CREATE_DS_N;
 
 
 

@@ -122,29 +122,4 @@ data ptdata_contents;
 run;
 
 * 5.1. Breakdown of analysis target group (registration example);
-proc sql noprint;
-    create table ds_N (Item char(200), Category char(200), count num, percent num);
-    select count(*) into: count_n from ptdata_all;
-    insert into ds_N values('‰ğÍ‘ÎÛW’c‚Ì“à–ó', '“o˜^”', &count_n., 100);
-quit;
-%EXEC_FREQ(ptdata_all, efficacy, efficacy);
-%EXEC_FREQ(ptdata_all, safety, safety);
-%EXEC_FREQ(ptdata_all, analysis_set, analysis_set);
-%EXEC_FREQ(ptdata_all, analysis_group, analysis_group);
-
-data analysis; 
-    set analysis_set(rename=(analysis_set=analysis))
-        analysis_group(rename=(analysis_group=analysis));
-run;
-
-%INSERT_SQL(safety, ds_N, %str('', 'ˆÀ‘S«‰ğÍ‘ÎÛW’c', count, percent), %str(safety=1));
-%INSERT_SQL(efficacy, ds_N, %str('', &efficacy_group., count, percent), %str(efficacy=1));
-%INSERT_SQL(analysis, ds_N, %str('', &ope_group., count, percent), %str(analysis=)&ope_group.);
-%INSERT_SQL(analysis, ds_N, %str('', &ope_non_chemo., count, percent), %str(analysis=)&ope_non_chemo.);
-%INSERT_SQL(analysis, ds_N, %str('', &ope_chemo., count, percent), %str(analysis=)&ope_chemo.);
-%INSERT_SQL(analysis, ds_N, %str('', &non_ope_group., count, percent), %str(analysis=)&non_ope_group.);
-%INSERT_SQL(analysis, ds_N, %str('', &non_ope_non_chemo., count, percent), %str(analysis=)&non_ope_non_chemo.);
-%INSERT_SQL(analysis, ds_N, %str('', &non_ope_chemo., count, percent), %str(analysis=)&non_ope_chemo.);
-
-* Delete the working dataset;
-proc datasets lib=work nolist; save ptdata ds_n ptdata_contents ptdata_all; quit;
+%CREATE_DS_N(ptdata_all, ds_N);

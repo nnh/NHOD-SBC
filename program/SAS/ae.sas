@@ -68,3 +68,14 @@ data ae_contents;
 run;
 %AE_EXEC(ope_chemo_cnt, ae_ope_chemo);
 %AE_EXEC(non_ope_chemo_cnt, ae_non_ope_chemo);
+
+
+data ds_ae_ope_chemo ds_ae_non_ope_chemo;
+    set ptdata;
+    if analysis_set=&ope_chemo. then do;
+        output ds_ae_ope_chemo;
+    end;
+    if analysis_set=&non_ope_chemo. then do;
+        output ds_ae_non_ope_chemo;
+    end;
+run;
