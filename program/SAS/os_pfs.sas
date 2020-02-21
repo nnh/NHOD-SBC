@@ -2,7 +2,7 @@
 Program Name : os_pfs.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-2-13
+Date : 2020-2-21
 SAS version : 9.4
 **************************************************************************;
 
@@ -106,10 +106,18 @@ SAS version : 9.4
         *** Example ***
     */
     data temp1;
-        set &input_ds.;
+        set &input_ds.(rename=(SURVIVAL=temp_survival)) end=eof;
         where os_day^=.;
         group=&group.;
+        retain SURVIVAL;
+        if eof=1 then do;
+            SURVIVAL=.;
+        end;
+        else if temp_survival^=. then do;
+            SURVIVAL=temp_survival;
+        end;
         temp_by=0;
+        drop temp_survival; 
     run;
     data temp3;
         set temp1(rename=(SURVIVAL=temp_survival) drop=temp_by);

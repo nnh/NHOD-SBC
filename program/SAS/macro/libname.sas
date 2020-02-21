@@ -2,7 +2,7 @@
 Program Name : libname.sas
 Purpose : Common processing
 Author : Ohtsuka Mariko
-Date : 2019-05-30
+Date : 2020-02-21
 SAS version : 9.4
 **************************************************************************;
 
@@ -332,14 +332,27 @@ options fmtsearch=(libads);
     quit;*/
 
 %mend FREQ_FUNC;
-
-%macro MEANS_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog);
+%macro INSERT_MEANS(cat_var, target_group, input_ds=temp_ds, output_ds=temp_means);
+    %local row_count;
+    proc sql noprint;
+        select count(*) into:row_count trimmed from &input_ds. where &cat_var.=&target_group.;
+        %if %eval(&row_count.) > 0 %then %do;
+            insert into &output_ds. select * from temp_ds where &cat_var.=&target_group.;
+        %end;
+        %else %do;
+            insert into &output_ds. set &cat_var.='dummy';
+        %end;
+        insert into &output_ds. set &cat_var.='dummy';
+    quit;
+%mend INSERT_MEANS;
+%macro MEANS_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog, output_flg=0);
     /*  *** Functional argument ***
         input_ds : Dataset to be aggregated
         title : Text to output in title column
         cat_var : Categorical variable
         var_var : Variable to analyze
         output_ds : Output dataset 
+        output_flg : 0:demog, 1:tumor reduction
         *** Example ***
         %MEANS_FUNC(title='”N—î', var_var=AGE);
     */
@@ -369,21 +382,21 @@ options fmtsearch=(libads);
         attrib _ALL_ label=" ";
     run;
     /* Sort observations */
-    proc sql;
+    proc sql noprint;
         create table temp_means like temp_ds;
-        insert into temp_means select * from temp_ds where &cat_var.=&all_group.;
-        insert into temp_means set &cat_var.='dummy';
-        insert into temp_means select * from temp_ds where &cat_var.=&ope_non_chemo. ;
-        insert into temp_means set &cat_var.='dummy'; 
-        insert into temp_means select * from temp_ds where &cat_var.=&ope_chemo. ;
-        insert into temp_means set &cat_var.='dummy';  
-        insert into temp_means select * from temp_ds where &cat_var.=&non_ope_non_chemo. ;
-        insert into temp_means set &cat_var.='dummy';  
-        insert into temp_means select * from temp_ds where &cat_var.=&non_ope_chemo. ; 
-        insert into temp_means set &cat_var.='dummy'; 
     quit;
+    %INSERT_MEANS(cat_var=&cat_var., target_group=&all_group.);
+    %INSERT_MEANS(cat_var=&cat_var., target_group=&ope_non_chemo.);
+    %INSERT_MEANS(cat_var=&cat_var., target_group=&ope_chemo.);
+    %INSERT_MEANS(cat_var=&cat_var., target_group=&non_ope_non_chemo.);
+    %INSERT_MEANS(cat_var=&cat_var., target_group=&non_ope_chemo.);
     proc transpose data=temp_means out=tran_means;
-        var n mean std median min max;
+        %if &output_flg.=0 %then %do;
+            var n mean std median min max;
+        %end;
+        %else %do;
+            var n mean std max min median;
+        %end;
     run;
     /* Set title only on the first line */
     proc sql;
@@ -425,7 +438,12 @@ options fmtsearch=(libads);
     option DKROCOND=error;
     %JOIN_TO_TEMPLATE(temp_freq_items, ds_join, items, %quote(&item_list.));
     data &output_ds.;
-        set &output_ds. temp_n ds_join;
+        if &output_n_flg.=1 then do;
+            set &output_ds. temp_n ds_join;
+        end;
+        else do;
+            set &output_ds. ds_join;
+        end;
         title=.;
         keep title items all_cnt all_per ope_non_chemo_cnt ope_non_chemo_per ope_chemo_cnt ope_chemo_per 
              non_ope_non_chemo_cnt non_ope_non_chemo_per non_ope_chemo_cnt non_ope_chemo_per;

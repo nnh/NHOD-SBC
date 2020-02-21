@@ -2,7 +2,7 @@
 Program Name : output_excel.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-01-27
+Date : 2020-02-21
 SAS version : 9.4
 *******************************************************/
 %macro CAT_COUNT_AND_PERCENT(input_ds, input_count_var_name, output_var_name, output_ds);
@@ -110,8 +110,8 @@ SAS version : 9.4
 %mend OUTPUT_INTO_SHEET_RESPONSE;
 
 options noxwait noxsync;
-%let templatepath=C:\Users\Mariko;
-%let template_input=test.xlsx;
+*%let templatepath=C:\Users\Mariko;
+*%let template_input=test.xlsx;
 %sysexec "&templatepath.\&template_input.";
 data _NULL_;
   rc = sleep(5);
@@ -146,7 +146,7 @@ run;
 %OUTPUT_INTO_SHEET(ds_t002, %quote(all t ope_non_chemo t ope_chemo t non_ope_chemo t non_ope_non_chemo), 
                      t002, start_row=7, start_col=4, last_col=8);
 *ï°êîÇÃå¥î≠ä‡Ç…ä÷Ç∑ÇÈãLèq;
-%OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid t MHCOM), l001, start_row=4, start_col=1, last_col=8);
+%OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid t MHCOM), l001, start_row=5, start_col=1, last_col=2);
 *éËèpÇÃç™é°ìx (ä‡à‚éc);
 %OUTPUT_INTO_SHEET(ds_surgical_curability_n, %quote(ope_non_chemo_cnt t ope_chemo_cnt), t003, start_row=5, start_col=2, last_col=3);
 %CAT_COUNT_AND_PERCENT(ds_surgical_curability, ope_non_chemo_cnt, ope_non_chemo, ds_t003);
@@ -191,15 +191,12 @@ run;
 *éÓ·áÇÃèkè¨ó¶;
 %OUTPUT_INTO_SHEET(ds_t018, %quote(non_ope_chemo_cnt t Lesion3m t Lesion6m), t018, start_row=5, start_col=2, last_col=4);
 *é°ó√Ç…ÇÊÇÈóLäQéñè€;
-%OUTPUT_INTO_SHEET(ae_ope_chemo, %quote(_1 t _2 t _3 t _4), t019, start_row=6, start_col=2, last_col=5);
-%OUTPUT_INTO_SHEET(ae_non_ope_chemo, %quote(_1 t _2 t _3 t _4), t019, start_row=6, start_col=6, last_col=9);
+%OUTPUT_INTO_SHEET(ds_t019, %quote(ope_1 t ope_2 t ope_3 t ope_4 t non_ope_1 t non_ope_2 t non_ope_3 t non_ope_4), t019, start_row=6, start_col=2, last_col=9);
 
-/*
 data _null_;
-    file sas2xl;
     put '[error(false)]';
-    put '[close("false")]';
+    put "[save.as(""&templatepath.\sas_&template_input."")]";
     put '[quit()]';
 run;
 
-*/
+

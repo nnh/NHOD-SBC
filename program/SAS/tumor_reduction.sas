@@ -17,7 +17,7 @@ SAS version : 9.4
         %let temp_varname=%scan(&varname_t., &i., "," );
         %let temp_label=%scan(&label_t., &i., "," );
         %TO_NUM_TEST_RESULTS(var=&temp_varname.);
-        %MEANS_FUNC(title="&temp_varname.", var_var=&temp_varname._num, output_ds=temp&i.);
+        %MEANS_FUNC(title="&temp_varname.", var_var=&temp_varname._num, output_ds=temp&i., output_flg=1);
         data temp&i.;
             set temp&i.;
             keep items non_ope_chemo_cnt;
