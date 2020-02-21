@@ -70,15 +70,15 @@ options fmtsearch=(libads);
             title char(&title_char_len.) label="%sysfunc(ktruncate(&items_label., 2, %sysfunc(lengthn(&items_label.)) - 2))", 
             items char(&items_char_len.) label='çÄñ⁄ñº',
             all_cnt num label=&all_group.,
-            all_per num label="%sysfunc(compress(%sysfunc(cat(&all_group. , &cst_per.)), %str(%')))",
+            all_per char(8)label="%sysfunc(compress(%sysfunc(cat(&all_group. , &cst_per.)), %str(%')))",
             ope_non_chemo_cnt num label="%sysfunc(compress(&ope_non_chemo., %str(%')))",
-            ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&ope_non_chemo. , &cst_per.)), %str(%')))",
+            ope_non_chemo_per char(8) label="%sysfunc(compress(%sysfunc(cat(&ope_non_chemo. , &cst_per.)), %str(%')))",
             ope_chemo_cnt num label="%sysfunc(compress(&ope_chemo., %str(%')))",
-            ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&ope_chemo. , &cst_per.)), %str(%')))",
+            ope_chemo_per char(8) label="%sysfunc(compress(%sysfunc(cat(&ope_chemo. , &cst_per.)), %str(%')))",
             non_ope_non_chemo_cnt num label="%sysfunc(compress(&non_ope_non_chemo., %str(%')))",
-            non_ope_non_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_non_chemo. , &cst_per.)), %str(%')))",
+            non_ope_non_chemo_per char(8) label="%sysfunc(compress(%sysfunc(cat(&non_ope_non_chemo. , &cst_per.)), %str(%')))",
             non_ope_chemo_cnt num label="%sysfunc(compress(&non_ope_chemo., %str(%')))",
-            non_ope_chemo_per num label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
+            non_ope_chemo_per char(8) label="%sysfunc(compress(%sysfunc(cat(&non_ope_chemo. , &cst_per.)), %str(%')))");
     quit;   
     %if &insert_n_flg.=1 %then %do;
         proc sql;
@@ -253,7 +253,7 @@ options fmtsearch=(libads);
     quit;
     data temp_ds;
         set temp_sum_var (rename=(PERCENT=temp_per));
-        PERCENT=round(COUNT / group_sum * 100, 0.1);
+        PERCENT=setDecimalFormat(COUNT / group_sum * 100);
         drop temp_per group_sum;
     run;
 
@@ -398,10 +398,28 @@ options fmtsearch=(libads);
             var n mean std max min median;
         %end;
     run;
+    /* Change the type of "percent" from numeric to string */
+    data tran_means_2;
+        set tran_means;
+        length item_name $100. temp_col1 8. temp_col2 $8. temp_col3 8. temp_col4 $8. temp_col5 8. temp_col6 $8. 
+               temp_col7 8. temp_col8 $8. temp_col9 8. temp_col10 $8.;
+        item_name=_NAME_;
+        temp_col1=col1;
+        temp_col2=put(col2, best12.);
+        temp_col3=col3;
+        temp_col4=put(col4, best12.);
+        temp_col5=col5;
+        temp_col6=put(col6, best12.);
+        temp_col7=col7;
+        temp_col8=put(col8, best12.);
+        temp_col9=col9;
+        temp_col10=put(col10, best12.);
+        drop _NAME_ col1 col2 col3 col4 col5 col6 col7 col8 col9 col10;
+    run;
     /* Set title only on the first line */
     proc sql;
-        insert into &output_ds. select &title., * from tran_means where _NAME_='n';
-        insert into &output_ds. select '', * from tran_means where _NAME_ NE 'n';
+        insert into &output_ds. select &title., * from tran_means_2 where item_name = 'n';
+        insert into &output_ds. select '', * from tran_means_2 where item_name ne 'n';
     quit;
 
 %mend MEANS_FUNC;
@@ -486,7 +504,7 @@ options fmtsearch=(libads);
     */
     proc sql noprint;
         update &target_ds.
-            set all_per=., ope_non_chemo_per=., ope_chemo_per=., non_ope_non_chemo_per=., non_ope_chemo_per=.;
+            set all_per='', ope_non_chemo_per='', ope_chemo_per='', non_ope_non_chemo_per='', non_ope_chemo_per='';
     quit;
 %mend DELETE_PER;
 %macro EDIT_TREATMENT(output_ds, var, items_list, input_ds=ptdata);
