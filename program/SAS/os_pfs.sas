@@ -7,6 +7,16 @@ SAS version : 9.4
 **************************************************************************;
 
 %macro EXEC_LIFETEST_1(input_ds, output_ds, group_var, target_1, target_2, p_value=0.05);
+    /*  *** Functional argument *** 
+        input_ds : Input dataset 
+        output_ds : Output dataset
+        group_var : Group variable
+        target_1 : Target group
+        target_2 : Target group
+        p_value : Risk rate of confidence interval 
+        *** Example ***
+        %EXEC_LIFETEST_1(os_all, lifetest_f001, analysis_group, &ope_group., &non_ope_group.);
+    */
     data temp_input;
         set &input_ds.;
         where os_day^=.;
@@ -69,6 +79,14 @@ SAS version : 9.4
     run;
 %mend EXEC_LIFETEST_1;
 %macro EXEC_LIFETEST_2(input_ds, output_ds, target_1, p_value=0.05);
+    /*  *** Functional argument *** 
+        input_ds : Input dataset 
+        output_ds : Output dataset
+        target_1 : Target group
+        p_value : Risk rate of confidence interval 
+        *** Example ***
+        %EXEC_LIFETEST_2(ds_non_ope_chemo_pfs, lifetest_f006, &non_ope_chemo.);
+    */
     data temp_input;
         set &input_ds.;
         where os_day^=.;
@@ -104,6 +122,7 @@ SAS version : 9.4
         input_ds : Dataset for lifetest
         group : Group name 
         *** Example ***
+        %OS_FUNC_1(&output_ds._1, &target_1.);
     */
     data temp1;
         set &input_ds.(rename=(SURVIVAL=temp_survival)) end=eof;

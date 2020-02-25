@@ -2,11 +2,11 @@
 Program Name : analysis_sets.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-06
+Date : 2020-02-25
 SAS version : 9.4
 **************************************************************************;
 %macro EDIT_DS_SEX();
-    %local raw_path dir_raw raw_registration;
+    %local raw_path dir_raw raw_registration i;
     %let raw_path="&projectpath.\input\rawdata";
     filename dir_raw &raw_path.;
     data temp_rawdata_filename; 

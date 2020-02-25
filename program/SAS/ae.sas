@@ -2,20 +2,15 @@
 Program Name : ae.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-21
+Date : 2020-02-25
 SAS version : 9.4
 **************************************************************************;
-data ds_ae_ope_chemo ds_ae_non_ope_chemo;
-    set ptdata;
-    dummy=.;
-    if analysis_set=&ope_chemo. then do;
-        output ds_ae_ope_chemo;
-    end;
-    if analysis_set=&non_ope_chemo. then do;
-        output ds_ae_non_ope_chemo;
-    end;
-run;
 %macro AE_EXEC_2(var);
+    /*  *** Functional argument *** 
+        var : Target variable
+        *** Example ***
+        %AE_EXEC_2(&temp_varname.);
+    */
     %local ae_count1 ae_count2 ae_count3 ae_count4 ae_count5 ae_count6 ae_count7 ae_count8 
            i j temp_idx max_grd input_ds_t temp_input_ds;
     %let max_grd=4;
@@ -46,4 +41,14 @@ run;
         %AE_EXEC_2(&temp_varname.);
     %end;
 %mend AE_EXEC_1;
+data ds_ae_ope_chemo ds_ae_non_ope_chemo;
+    set ptdata;
+    dummy=.;
+    if analysis_set=&ope_chemo. then do;
+        output ds_ae_ope_chemo;
+    end;
+    if analysis_set=&non_ope_chemo. then do;
+        output ds_ae_non_ope_chemo;
+    end;
+run;
 %AE_EXEC_1();

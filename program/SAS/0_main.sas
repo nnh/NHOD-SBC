@@ -2,13 +2,14 @@
 Program Name : main.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-21
+Date : 2020-02-25
 SAS version : 9.4
 *******************************************************/
 * Define constants;
 %let saihi_input=解析対象集団一覧.xlsx;
 %let saihi_input_range=Sheet1!R2C1:R33C4;
 %let template_input=解析図表テンプレート20200221.xlsx;
+%let template_output=sas_output.xlsx;
 **************************************************************************;
 * Define macros;
 %macro GET_THISFILE_FULLPATH;
@@ -46,4 +47,5 @@ SAS version : 9.4
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\response.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\tumor_reduction.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\ae.sas";
+%include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\output_excel.sas";
 * *** main program end ***;

@@ -2,7 +2,7 @@
 Program Name : libname.sas
 Purpose : Common processing
 Author : Ohtsuka Mariko
-Date : 2020-02-21
+Date : 2020-02-25
 SAS version : 9.4
 **************************************************************************;
 
@@ -144,6 +144,12 @@ options fmtsearch=(libads);
 %mend GET_CONTENTS;
 
 %macro GET_TYPE(input_ds, var);
+    /*  *** Functional argument *** 
+        input_ds : Table name of select statement
+        var : Variable name to be tested
+        *** Example ***
+        %GET_TYPE(&input_ds., &var.);
+    */
     %global var_type;
     %local temp_type;
     data _NULL_;
@@ -161,6 +167,12 @@ options fmtsearch=(libads);
 %mend GET_TYPE; 
 
 %macro GET_FORMAT(input_ds, var);
+    /*  *** Functional argument *** 
+        input_ds : Table name of select statement
+        var : Variable name to be tested
+        *** Example ***
+        %GET_FORMAT(ds_colnames, 'items');
+    */
     %global str_format;
     %GET_TYPE(&input_ds., &var.);
     %let str_format=&var_type.;
@@ -224,7 +236,7 @@ options fmtsearch=(libads);
 %macro FREQ_FUNC(input_ds=ptdata, title='', cat_var=analysis_set, var_var='', output_ds=ds_demog, contents=ptdata_contents);
     /*  *** Functional argument ***
         input_ds : Dataset to be aggregated
-        title : Text to output in title column
+        title : *** Unused ***
         cat_var : Categorical variable
         var_var : Variable to analyze
         output_ds : Output dataset 
@@ -316,7 +328,6 @@ options fmtsearch=(libads);
         format items &str_format..;
         merge temp1-temp&demog_group_count.;
         by temp_items;
-        /*if _N_=1 then do; title=&title.; end;*/
         items=temp_items;
         drop temp_items;
     run;
@@ -325,14 +336,16 @@ options fmtsearch=(libads);
         set &output_ds. temp_output;
     run;
 
-    /* Delete the working dataset */
-    /*proc datasets lib=work nolist; 
-        delete temp1-temp&demog_group_count. temp_ds temp_all_ds temp_output temp_sum temp_sum_var temp_freq_all; 
-        run; 
-    quit;*/
-
 %mend FREQ_FUNC;
 %macro INSERT_MEANS(cat_var, target_group, input_ds=temp_ds, output_ds=temp_means);
+    /*  *** Functional argument ***
+        cat_var : Variable name
+        target_group : Output target group
+        input_ds : Input dataset
+        output_ds : Output dataset
+        *** Example ***
+        %INSERT_MEANS(cat_var=&cat_var., target_group=&all_group.);
+    */
     %local row_count;
     proc sql noprint;
         select count(*) into:row_count trimmed from &input_ds. where &cat_var.=&target_group.;
@@ -500,7 +513,7 @@ options fmtsearch=(libads);
     /*  *** Functional argument *** 
         target_ds : dataset
         *** Example ***
-        %DELETE_PER(temp_meta);;
+        %DELETE_PER(temp_meta);
     */
     proc sql noprint;
         update &target_ds.
@@ -508,6 +521,14 @@ options fmtsearch=(libads);
     quit;
 %mend DELETE_PER;
 %macro EDIT_TREATMENT(output_ds, var, items_list, input_ds=ptdata);
+    /*  *** Functional argument *** 
+        output_ds : Output dataset
+        var : Variable name
+        items_list : Output items
+        input_ds : Input dataset
+        *** Example ***
+        %EDIT_TREATMENT(ds_surgical_curability, resectionCAT, %quote('RX', 'R0', 'R1', 'R2'));
+    */
     %CREATE_OUTPUT_DS(output_ds=temp_&output_ds., items_label='');
     %FORMAT_FREQ(&var., &items_list., output_ds=temp_&output_ds., input_ds=&input_ds.);
     data &output_ds. temp_n;
@@ -522,6 +543,14 @@ options fmtsearch=(libads);
     %EDIT_N(temp_n, &output_ds._n);
 %mend EDIT_TREATMENT;
 %macro EDIT_N(input_ds, output_ds, pattern_f=0);
+    /*  *** Functional argument *** 
+        input_ds : Input dataset
+        output_ds : Output dataset
+        pattern_f : Output string conditions
+                    0 : "(n=1)", 1 : "1", 2 : "n=1" 
+        *** Example ***
+        %EDIT_N(temp_t010_n, t010_n);
+    */
     %local var_cnt dsid rc i;
     proc contents data=&input_ds. out=temp_contents varnum noprint;
     run;
@@ -555,6 +584,12 @@ options fmtsearch=(libads);
     run;
 %mend;
 %macro CREATE_DS_N(input_ds, output_ds); 
+    /*  *** Functional argument *** 
+        input_ds : Input dataset
+        output_ds : Output dataset
+        *** Example ***
+        %CREATE_DS_N(ptdata_all, ds_N);
+    */
     %local count_n;
     proc sql noprint;
         create table &output_ds. (Item char(200), Category char(200), count num, percent num);
@@ -578,7 +613,5 @@ options fmtsearch=(libads);
     %INSERT_SQL(analysis, &output_ds., %str('', &non_ope_non_chemo., count, percent), %str(analysis=)&non_ope_non_chemo.);
     %INSERT_SQL(analysis, &output_ds., %str('', &non_ope_chemo., count, percent), %str(analysis=)&non_ope_chemo.);
 %mend CREATE_DS_N;
-
-
-
+*Function call;
 %inc "&projectpath.\program\SAS\macro\libfunction.sas";
