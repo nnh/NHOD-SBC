@@ -42,7 +42,7 @@ SAS version : 9.4
     %end;
 %mend AE_EXEC_1;
 data ds_ae_ope_chemo ds_ae_non_ope_chemo;
-    set ptdata;
+    set ptdata_all;
     dummy=.;
     if analysis_set=&ope_chemo. then do;
         output ds_ae_ope_chemo;

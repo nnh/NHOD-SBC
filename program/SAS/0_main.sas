@@ -47,5 +47,5 @@ SAS version : 9.4
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\response.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\tumor_reduction.sas";
 %include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\ae.sas";
-%include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\output_excel.sas";
+*%include "\\aronas\Stat\Trials\NHO\NHOD-SBC\program\SAS\output_excel.sas";
 * *** main program end ***;

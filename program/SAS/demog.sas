@@ -7,7 +7,7 @@ SAS version : 9.4
 **************************************************************************;
 * 5.3. Background and demographic characteristics;
 options noquotelenmax; 
-%CREATE_OUTPUT_DS(output_ds=ds_demog_n, items_label='背景と人口統計学的特性', insert_n_flg=1);
+%CREATE_OUTPUT_DS(output_ds=ds_demog_n, items_label='背景と人口統計学的特性', input_n=ds_N_efficacy, insert_n_flg=1);
 data ds_demog_n;
     set ds_demog_n;
     keep all_cnt ope_non_chemo_cnt ope_chemo_cnt non_ope_non_chemo_cnt non_ope_chemo_cnt;

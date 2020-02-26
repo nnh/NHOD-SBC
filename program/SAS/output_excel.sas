@@ -20,19 +20,22 @@ SAS version : 9.4
     %let per_var_num=%eval(&count_var_num. + 1);
     %let per_var_name=%sysfunc(varname(&dsid., &per_var_num.));
     %let rc=%sysfunc(close(&dsid));
+    proc sql noprint;
+        create table temp_ds_per as
+        select *,
+            case when &per_var_name. is not missing then
+                cat(&input_count_var_name., ' (', compress(&per_var_name., , 's'), '%)')
+            else
+                case when &input_count_var_name. is not missing then
+                    compress(put(&input_count_var_name., best12.), , 's')
+                else
+                    ''
+                end
+            end as &output_var_name.
+        from &input_ds.;
+    quit;
     data &output_ds.;
-        set &input_ds.;
-        if &per_var_name.^=. then do;
-            &output_var_name.=catt(&input_count_var_name., ' (', trimSpaces(&per_var_name.), '%)');
-        end;
-        else do;
-            if &input_count_var_name.^=. then do;
-                &output_var_name.=&input_count_var_name.;
-            end;
-            else do;
-                &output_var_name.=cat(.);
-            end;
-        end;
+        set temp_ds_per;
         drop &input_count_var_name. &per_var_name.;
     run;
 %mend;
@@ -159,7 +162,7 @@ run;
 *解析対象集団の内訳;
 %OUTPUT_INTO_SHEET(ds_n, %quote(count), t000, start_row=4, start_col=2, last_col=2);
 *症例の内訳と中止例集計;
-%OUTPUT_INTO_SHEET(cancel, %quote(ope_non_chemo_cnt, ope_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt), 
+%OUTPUT_INTO_SHEET(cancel, %quote(ope_non_chemo_cnt, ope_chemo_cnt, non_ope_non_chemo_cnt, non_ope_chemo_cnt), 
                      t001, start_row=5, start_col=2, last_col=5);
 
 
@@ -172,14 +175,14 @@ run;
 
 
 *背景と人口統計学的特性;
-%OUTPUT_INTO_SHEET(ds_demog_n, %quote(all_cnt, ope_non_chemo_cnt, ope_chemo_cnt, non_ope_chemo_cnt, non_ope_non_chemo_cnt), 
+%OUTPUT_INTO_SHEET(ds_demog_n, %quote(all_cnt, ope_non_chemo_cnt, ope_chemo_cnt, non_ope_non_chemo_cnt, non_ope_chemo_cnt), 
                      t002, start_row=5, start_col=4, last_col=8);
 %CAT_COUNT_AND_PERCENT(ds_demog, all_cnt, all, ds_t002);
 %CAT_COUNT_AND_PERCENT(ds_t002, ope_non_chemo_cnt, ope_non_chemo, ds_t002);
 %CAT_COUNT_AND_PERCENT(ds_t002, ope_chemo_cnt, ope_chemo, ds_t002);
 %CAT_COUNT_AND_PERCENT(ds_t002, non_ope_non_chemo_cnt, non_ope_non_chemo, ds_t002);
 %CAT_COUNT_AND_PERCENT(ds_t002, non_ope_chemo_cnt, non_ope_chemo, ds_t002);
-%OUTPUT_INTO_SHEET(ds_t002, %quote(all, ope_non_chemo, ope_chemo, non_ope_chemo, non_ope_non_chemo), 
+%OUTPUT_INTO_SHEET(ds_t002, %quote(all, ope_non_chemo, ope_chemo, non_ope_non_chemo, non_ope_chemo), 
                      t002, start_row=7, start_col=4, last_col=8);
 *複数の原発癌に関する記述;
 %OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid, MHCOM), l001, start_row=5, start_col=1, last_col=2);

@@ -467,7 +467,7 @@ options fmtsearch=(libads);
         drop title;
     run;
     option DKROCOND=error;
-    %JOIN_TO_TEMPLATE(temp_freq_items, ds_join, items, %quote(&item_list.));
+    %JOIN_TO_TEMPLATE(temp_freq_items, ds_join, items, %quote(&item_list.), output_zero_flg=1);
     data &output_ds.;
         if &output_n_flg.=1 then do;
             set &output_ds. temp_n ds_join;
@@ -481,16 +481,17 @@ options fmtsearch=(libads);
     run;
 
 %mend FORMAT_FREQ;
-%macro JOIN_TO_TEMPLATE(input_ds, output_ds, join_key_colname, template_rows);
+%macro JOIN_TO_TEMPLATE(input_ds, output_ds, join_key_colname, template_rows, output_zero_flg=0);
     /*  *** Functional argument ***  
         input_ds : Input dataset
         output_ds : Output dataset
         join_key_colname : Left join key
         template_rows : Output dataset rows
+        output_zero_flg : 1 : Convert NA to 0
         *** Example ***
         %JOIN_TO_TEMPLATE(ds_res_1, response_ope_non_chemo, items, %quote('n', 'CR', 'PR', 'SD', 'PD', 'NE'));
     */
-    %local delim_count i temp_col;
+    %local delim_count i temp_col col_count temp_colname temp_colname_length temp_fmt temp_type temp_zero;
     %let delim_count = %sysfunc(count(&template_rows., %quote(,)));
     proc sql noprint;
         create table template_ds (temp_key char(100), seq num);
@@ -503,6 +504,41 @@ options fmtsearch=(libads);
         create table temp_ds as 
             select * from template_ds A left join &input_ds. B on A.temp_key = B.&join_key_colname. order by seq;
     quit;
+    %if &output_zero_flg=1 %then %do;
+        proc contents data=temp_ds out=join_template_contents varnum noprint;
+        run;
+        proc sql noprint;
+            select count(*) into:col_count trimmed from join_template_contents;
+        quit;
+        %do i = 1 %to &col_count.;
+            data _NULL_;
+                set join_template_contents;
+                if _N_=&i. then do;
+                    call symput('temp_colname', NAME);
+                    call symput('temp_colname_length', length(trim(NAME)));
+                    call symput('temp_fmt', substr(FORMAT, 1, 3));
+                    call symput('temp_type', TYPE);
+                end;
+            run;
+            %if &temp_fmt.^=FMT %then %do;
+                %if &temp_type.=1 %then %do;
+                    %let temp_zero=0;
+                %end;
+                %else %if &temp_type.=2 %then %do;
+                    %let temp_per_str=%sysfunc(substr(&temp_colname.,%eval(&temp_colname_length. - 3 + 1), 3));
+                    %if &temp_per_str.=per %then %do;
+                        %let temp_zero='0.0';
+                    %end;
+                    %else %do;
+                        %let temp_zero='0';
+                    %end;
+                %end;
+                proc sql noprint;
+                    update temp_ds set &temp_colname.=&temp_zero. where &temp_colname. is missing;
+                quit;
+            %end; 
+        %end;
+    %end;
     data &output_ds.;
         set temp_ds;
         drop &join_key_colname.;

@@ -2,7 +2,7 @@
 Program Name : analysis_sets.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-25
+Date : 2020-02-26
 SAS version : 9.4
 **************************************************************************;
 %macro EDIT_DS_SEX();
@@ -102,7 +102,7 @@ run;
 * Efficacy group;
 data ptdata;
     set ptdata;
-    where efficacy=1;
+    where efficacy=1 & analysis_group is not missing;
 run;
 
 * Get variable information of ptdata;
@@ -123,3 +123,4 @@ run;
 
 * 5.1. Breakdown of analysis target group (registration example);
 %CREATE_DS_N(ptdata_all, ds_N);
+%CREATE_DS_N(ptdata, ds_N_efficacy);
