@@ -2,7 +2,7 @@
 Program Name : output_excel.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-25
+Date : 2020-02-27
 SAS version : 9.4
 *******************************************************/
 %macro CAT_COUNT_AND_PERCENT(input_ds, input_count_var_name, output_var_name, output_ds);
@@ -159,9 +159,7 @@ options noxwait noxsync;
 data _NULL_;
   rc = sleep(5);
 run;
-*解析対象集団の内訳;
 %OUTPUT_INTO_SHEET(ds_n, %quote(count), t000, start_row=4, start_col=2, last_col=2);
-*症例の内訳と中止例集計;
 %OUTPUT_INTO_SHEET(cancel, %quote(ope_non_chemo_cnt, ope_chemo_cnt, non_ope_non_chemo_cnt, non_ope_chemo_cnt), 
                      t001, start_row=5, start_col=2, last_col=5);
 
@@ -174,7 +172,6 @@ run;
 
 
 
-*背景と人口統計学的特性;
 %OUTPUT_INTO_SHEET(ds_demog_n, %quote(all_cnt, ope_non_chemo_cnt, ope_chemo_cnt, non_ope_non_chemo_cnt, non_ope_chemo_cnt), 
                      t002, start_row=5, start_col=4, last_col=8);
 %CAT_COUNT_AND_PERCENT(ds_demog, all_cnt, all, ds_t002);
@@ -184,23 +181,18 @@ run;
 %CAT_COUNT_AND_PERCENT(ds_t002, non_ope_chemo_cnt, non_ope_chemo, ds_t002);
 %OUTPUT_INTO_SHEET(ds_t002, %quote(all, ope_non_chemo, ope_chemo, non_ope_non_chemo, non_ope_chemo), 
                      t002, start_row=7, start_col=4, last_col=8);
-*複数の原発癌に関する記述;
 %OUTPUT_INTO_SHEET(ds_multiple_primary_cancers, %quote(subjid, MHCOM), l001, start_row=5, start_col=1, last_col=2);
-*手術の根治度 (癌遺残);
 %OUTPUT_INTO_SHEET(ds_surgical_curability_n, %quote(ope_non_chemo_cnt, ope_chemo_cnt), t003, start_row=5, 
                      start_col=2, last_col=3);
 %CAT_COUNT_AND_PERCENT(ds_surgical_curability, ope_non_chemo_cnt, ope_non_chemo, ds_t003);
 %CAT_COUNT_AND_PERCENT(ds_t003, ope_chemo_cnt, ope_chemo, ds_t003);
 %OUTPUT_INTO_SHEET(ds_t003, %quote(ope_non_chemo, ope_chemo), t003, start_row=6, start_col=2, last_col=3);
-*アジュバント化学療法レジメン;
 %OUTPUT_INTO_SHEET(ds_adjuvant_chemo_regimen_n, %quote(ope_chemo_cnt), t004, start_row=5, start_col=2, last_col=2);
 %CAT_COUNT_AND_PERCENT(ds_adjuvant_chemo_regimen, ope_chemo_cnt, ope_chemo, ds_t004);
 %OUTPUT_INTO_SHEET(ds_t004, %quote(ope_chemo), t004, start_row=6, start_col=2, last_col=2);
-*第一選択化学療法レジメン;
 %OUTPUT_INTO_SHEET(ds_first_line_chemo_regimen_n, %quote(non_ope_chemo_cnt), t005, start_row=5, start_col=2, last_col=2);
 %CAT_COUNT_AND_PERCENT(ds_first_line_chemo_regimen, non_ope_chemo_cnt, non_ope_chemo, ds_t005);
 %OUTPUT_INTO_SHEET(ds_t005, %quote(non_ope_chemo), t005, start_row=6, start_col=2, last_col=2);
-*原発巣切除の有無;
 %OUTPUT_INTO_SHEET(ds_primary_site_resection_n, %quote(ope_non_chemo_cnt, ope_chemo_cnt, non_ope_non_chemo_cnt, non_ope_chemo_cnt), 
                      t006, start_row=5, start_col=2, last_col=5);
 %CAT_COUNT_AND_PERCENT(ds_primary_site_resection, ope_non_chemo_cnt, ope_non_chemo, ds_t006);
@@ -209,7 +201,6 @@ run;
 %CAT_COUNT_AND_PERCENT(ds_t006, non_ope_chemo_cnt, non_ope_chemo, ds_t006);
 %OUTPUT_INTO_SHEET(ds_t006, %quote(ope_non_chemo, ope_chemo, non_ope_non_chemo, non_ope_chemo), t006, 
                      start_row=6, start_col=2, last_col=5);
-*全生存期間;
 %OUTPUT_OS(f001, t007);
 %OUTPUT_OS(f002, t008);
 %OUTPUT_OS(f003, t009);
@@ -217,7 +208,6 @@ run;
                      start_row=5, start_col=2, last_col=5);
 %OUTPUT_INTO_SHEET(t010, %quote(ope_non_chemo_cnt, ope_chemo_cnt, non_ope_non_chemo_cnt, non_ope_chemo_cnt), t010, 
                      start_row=6, start_col=2, last_col=5);
-*無増悪生存期間;
 %OUTPUT_OS(f004, t011);
 %OUTPUT_OS(f005, t012);
 %OUTPUT_OS(f006, t013, output_control_group=0);
@@ -225,18 +215,22 @@ run;
                      start_col=2, last_col=5);
 %OUTPUT_INTO_SHEET(t014, %quote(ope_non_chemo_cnt, ope_chemo_cnt, non_ope_chemo_cnt), t014, start_row=6, 
                      start_col=2, last_col=5);
-*治療の奏功割合;
 %OUTPUT_INTO_SHEET(response_ope_non_chemo_n, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
 %CAT_COUNT_AND_PERCENT(response_ope_non_chemo, ope_non_chemo_cnt, ope_non_chemo, ds_t015);
 %OUTPUT_INTO_SHEET(ds_t015, %quote(ope_non_chemo), t015, start_row=6, start_col=2, last_col=2);
 %OUTPUT_INTO_SHEET(response_ope_non_chemo_n, %quote(ope_non_chemo_cnt), t015, start_row=5, start_col=2, last_col=2);
 %OUTPUT_INTO_SHEET_RESPONSE(output_res_ope_chemo, ope_chemo_cnt, t016, 5, 2, 5);
 %OUTPUT_INTO_SHEET_RESPONSE(output_res_non_ope_chemo, non_ope_chemo_cnt, t017, 5, 2, 10);
-*腫瘍の縮小率;
 %OUTPUT_INTO_SHEET(ds_t018, %quote(non_ope_chemo_cnt, Lesion3m, Lesion6m), t018, start_row=5, start_col=2, last_col=4);
-*治療による有害事象;
 %OUTPUT_INTO_SHEET(ds_t019, %quote(ope_1, ope_2, ope_3, ope_4, non_ope_1, non_ope_2, non_ope_3, non_ope_4), t019, 
                      start_row=6, start_col=2, last_col=9);
+* Insert a blank line;
+proc sql noprint;
+    create table ds_dummy(v1 char(1), v2 char(1), v3 char(1), v4 char(1), v5 char(1), v6 char(1), v7 char(1), v8 char(1));
+    insert into ds_dummy values("", "", "", "", "", "", "", ""); 
+quit;
+%OUTPUT_INTO_SHEET(ds_dummy, %quote(v1, v2, v3, v4, v5, v6, v7, v8), t019, start_row=9, start_col=2, last_col=9);
+
 * Delete the output file if it exists;
 %let output_file_name=&templatepath.\&template_output.;
 data _null_;

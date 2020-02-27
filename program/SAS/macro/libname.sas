@@ -94,6 +94,20 @@ options fmtsearch=(libads);
 
         quit;
     %end;
+    * Convert NA to 0;
+    proc sql noprint;
+        update &output_ds. set all_cnt=0 where all_cnt is missing;
+        update &output_ds. set all_per='0' where all_per is missing;
+        update &output_ds. set ope_non_chemo_cnt=0 where ope_non_chemo_cnt is missing;
+        update &output_ds. set ope_non_chemo_per='0' where ope_non_chemo_per is missing;
+        update &output_ds. set ope_chemo_cnt=0 where ope_chemo_cnt is missing;
+        update &output_ds. set ope_chemo_per='0' where ope_chemo_per is missing;
+        update &output_ds. set non_ope_non_chemo_cnt=0 where non_ope_non_chemo_cnt is missing;
+        update &output_ds. set non_ope_non_chemo_per='0' where non_ope_non_chemo_per is missing;
+        update &output_ds. set non_ope_chemo_cnt=0 where non_ope_chemo_cnt is missing;
+        update &output_ds. set non_ope_chemo_per='0' where non_ope_chemo_per is missing;
+    quit;
+
     proc contents data=&output_ds. out=&output_contents_ds. varnum noprint; run;
 %mend CREATE_OUTPUT_DS;
 
