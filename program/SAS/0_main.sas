@@ -1,10 +1,3 @@
-/******************************************************
-Program Name : main.sas
-Study Name : NHOD-SBC
-Author : Ohtsuka Mariko
-Date : 2020-02-27
-SAS version : 9.4
-*******************************************************/
 * Save log;
 options errorabend;
 proc printto log="C:\Users\Mariko\Desktop\log.log" new;
@@ -12,6 +5,13 @@ run;
 data class;
     set sashelp.class;
 run;
+/******************************************************
+Program Name : main.sas
+Study Name : NHOD-SBC
+Author : Ohtsuka Mariko
+Date : 2020-03-06
+SAS version : 9.4
+*******************************************************/
 %let saihi_input=解析対象集団一覧.xlsx;
 %let saihi_input_range=Sheet1!R2C1:R33C4;
 %let template_input=解析図表テンプレート20200221.xlsx;

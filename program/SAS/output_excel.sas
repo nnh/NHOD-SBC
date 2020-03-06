@@ -2,7 +2,7 @@
 Program Name : output_excel.sas
 Study Name : NHOD-SBC
 Author : Ohtsuka Mariko
-Date : 2020-02-27
+Date : 2020-03-06
 SAS version : 9.4
 *******************************************************/
 %macro CAT_COUNT_AND_PERCENT(input_ds, input_count_var_name, output_var_name, output_ds);
@@ -232,7 +232,7 @@ quit;
 %OUTPUT_INTO_SHEET(ds_dummy, %quote(v1, v2, v3, v4, v5, v6, v7, v8), t019, start_row=9, start_col=2, last_col=9);
 
 * Delete the output file if it exists;
-%let output_file_name=&templatepath.\&template_output.;
+%let output_file_name=&outpath.\&template_output.;
 data _null_;
     fname="tempfile";
     rc=filename(fname, "&output_file_name.");

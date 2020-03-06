@@ -2,7 +2,7 @@
 Program Name : libname.sas
 Purpose : Common processing
 Author : Ohtsuka Mariko
-Date : 2020-02-25
+Date : 2020-03-06
 SAS version : 9.4
 **************************************************************************;
 
@@ -468,6 +468,7 @@ options fmtsearch=(libads);
     run;
     %CREATE_DS_N(temp_input_ds, temp_ds_N);
     %CREATE_OUTPUT_DS(output_ds=temp_n, insert_n_flg=1, input_n=temp_ds_N);
+    %DELETE_PER(temp_n);
     data temp_n;
         set temp_n;
         drop title;
