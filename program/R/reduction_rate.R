@@ -1,12 +1,12 @@
 ##################################################
 # Program : reduction_rate.R
 # Study : NHOD-SBC
-# Published : 2019/12/26
 # Author : Kato Kiroku
-# Version : 19.12.26.000
+# Published : 2020/04/20
+# Version : 000.20.05.01
 ##################################################
 
-library(openxlsx)
+library(readxl)
 library(tidyverse)
 library(magrittr)
 
@@ -19,7 +19,7 @@ rawpath <- paste0(prtpath, "/input/rawdata")
 outpath <- paste0(prtpath, "/output/R")
 
 ptdata <- read.csv(paste0(adspath, "/ptdata.csv"), na.strings = "")
-allocation <- read.xlsx(paste0(docpath, "/解析対象集団一覧.xlsx"), na.strings = "")
+allocation <- read_excel(paste0(docpath, "/解析対象集団一覧.xlsx"), na = "")
 allocation <- allocation %>%
   rename(SUBJID = 症例登録番号, group = 解析対象集団)
 ptdata <- merge(ptdata, allocation, by = "SUBJID", all = T)
@@ -28,7 +28,7 @@ dsv <- function(x, y){
   ptdata[[x]][ptdata[[x]] == -1] <- NA
   df1 <- ptdata %>%
     subset(group == "治癒未切除・Chemotherapy群") %>%
-    drop_na(x) %>%
+    drop_na(all_of(x)) %>%
     summarise(n = n(),
               mean = round(mean(eval(as.symbol(x))), digits = 1),
               std = round(sd(eval(as.symbol(x))), digits = 1),
@@ -44,4 +44,15 @@ dsv("Lesion3m", "3ヵ月")
 dsv("Lesion6m", "6ヵ月")
 
 reduction_rate <- cbind(SBCsum, Lesion3m, Lesion6m)
-write.csv(reduction_rate, paste0(outpath, "/reduction_rate.csv"), row.names = TRUE, na = "")
+
+library(XLConnect)
+writeWorksheetToFile(file = paste0(outpath, "/R_output.xlsx"),
+                     data = list(reduction_rate),
+                     sheet = c("T018"),
+                     startRow = c(5),
+                     startCol = c(2),
+                     header = FALSE,
+                     styleAction = XLC$"STYLE_ACTION.NONE")
+
+
+# write.csv(reduction_rate, paste0(outpath, "/S_5_5_4_ds_tumor_reduction.csv"), row.names = TRUE, na = "")

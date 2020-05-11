@@ -1,12 +1,12 @@
 ##################################################
 # Program : safety.R
 # Study : NHOD-SBC
-# Published : 2019/12/25
 # Author : Kato Kiroku
-# Version : 19.12.25.000
+# Published : 2020/04/20
+# Version : 000.20.05.01
 ##################################################
 
-library(openxlsx)
+library(readxl)
 library(tidyverse)
 library(magrittr)
 
@@ -19,7 +19,7 @@ rawpath <- paste0(prtpath, "/input/rawdata")
 outpath <- paste0(prtpath, "/output/R")
 
 ptdata <- read.csv(paste0(adspath, "/ptdata.csv"), na.strings = "")
-allocation <- read.xlsx(paste0(docpath, "/解析対象集団一覧.xlsx"), na.strings = "")
+allocation <- read_excel(paste0(docpath, "/解析対象集団一覧.xlsx"), na = "")
 allocation <- allocation %>%
   rename(SUBJID = 症例登録番号, group = 解析対象集団)
 ptdata <- merge(ptdata, allocation, by = "SUBJID", all = T)
@@ -49,23 +49,36 @@ frequency <- function(x, y){
 frequency("AE_MortoNeuropathy", ptdata1)
 frequency("AE_SensNeuropathy", ptdata1)
 frequency("AE_diarrhea", ptdata1)
+Toxicity <- data.frame(Grade0 = "", Grade1 = "", Grade2 = "", Grade3 = "", Grade4 = "")
 frequency("AE_DecreasNeut", ptdata1)
 frequency("AE_DecreasPLT", ptdata1)
 frequency("AE_Skin", ptdata1)
 frequency("AE_Anorexia", ptdata1)
 frequency("AE_HighBDPRES", ptdata1)
 frequency("AE_Prote", ptdata1)
-ae1 <- rbind(AE_MortoNeuropathy, AE_SensNeuropathy, AE_diarrhea, AE_DecreasNeut, AE_DecreasPLT, AE_Skin, AE_Anorexia, AE_HighBDPRES, AE_Prote)
-write.csv(ae1, paste0(outpath, "/ae_RS_CT.csv"), row.names = TRUE, na = "")
+ae1 <- rbind(AE_MortoNeuropathy, AE_SensNeuropathy, AE_diarrhea, Toxicity, AE_DecreasNeut, AE_DecreasPLT, AE_Skin, AE_Anorexia, AE_HighBDPRES, AE_Prote)
+ae1 <- subset(ae1, select = -c(Grade0))
+# write.csv(ae1, paste0(outpath, "/S_5_6_1_ae_ope_chemo.csv"), row.names = TRUE, na = "")
 
 frequency("AE_MortoNeuropathy", ptdata2)
 frequency("AE_SensNeuropathy", ptdata2)
 frequency("AE_diarrhea", ptdata2)
+Toxicity <- data.frame(Grade0 = "", Grade1 = "", Grade2 = "", Grade3 = "", Grade4 = "")
 frequency("AE_DecreasNeut", ptdata2)
 frequency("AE_DecreasPLT", ptdata2)
 frequency("AE_Skin", ptdata2)
 frequency("AE_Anorexia", ptdata2)
 frequency("AE_HighBDPRES", ptdata2)
 frequency("AE_Prote", ptdata2)
-ae2 <- rbind(AE_MortoNeuropathy, AE_SensNeuropathy, AE_diarrhea, AE_DecreasNeut, AE_DecreasPLT, AE_Skin, AE_Anorexia, AE_HighBDPRES, AE_Prote)
-write.csv(ae2, paste0(outpath, "/ae_nonRS_CT.csv"), row.names = TRUE, na = "")
+ae2 <- rbind(AE_MortoNeuropathy, AE_SensNeuropathy, AE_diarrhea, Toxicity, AE_DecreasNeut, AE_DecreasPLT, AE_Skin, AE_Anorexia, AE_HighBDPRES, AE_Prote)
+ae2 <- subset(ae2, select = -c(Grade0))
+# write.csv(ae2, paste0(outpath, "/S_5_6_1_ae_non_ope_chemo.csv"), row.names = TRUE, na = "")
+
+library(XLConnect)
+writeWorksheetToFile(file = paste0(outpath, "/R_output.xlsx"),
+                     data = list(ae1, ae2),
+                     sheet = c("T019", "T019"),
+                     startRow = c(6, 6),
+                     startCol = c(2, 6),
+                     header = FALSE,
+                     styleAction = XLC$"STYLE_ACTION.NONE")
