@@ -2,8 +2,8 @@
 # Program : response_rate.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/11
-# Version : 000.20.05.11
+# Published : 2020/05/12
+# Version : 000.20.05.12
 ##################################################
 
 library(readxl)
