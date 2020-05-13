@@ -2,8 +2,8 @@
 # Program : reduction_rate.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/04/20
-# Version : 000.20.05.01
+# Published : 2020/05/13
+# Version : 001.20.05.13
 ##################################################
 
 library(readxl)
@@ -30,11 +30,11 @@ dsv <- function(x, y){
     subset(group == "治癒未切除・Chemotherapy群") %>%
     drop_na(all_of(x)) %>%
     summarise(n = n(),
-              mean = round(mean(eval(as.symbol(x))), digits = 1),
-              std = round(sd(eval(as.symbol(x))), digits = 1),
-              median = round(median(eval(as.symbol(x))), digits = 1),
-              max = round(max(eval(as.symbol(x))), digits = 1),
-              min = round(min(eval(as.symbol(x))), digits = 1))
+              平均 = round(mean(eval(as.symbol(x))), digits = 1),
+              標準偏差 = round(sd(eval(as.symbol(x))), digits = 1),
+              最大 = round(max(eval(as.symbol(x))), digits = 1),
+              最小 = round(min(eval(as.symbol(x))), digits = 1),
+              中央値 = round(median(eval(as.symbol(x))), digits = 1))
   df2 <- data.frame(t(df1))
   for (i in 1:ncol(df2)) {colnames(df2)[i] <- y}
   assign(x, df2, .GlobalEnv)
@@ -43,14 +43,16 @@ dsv("SBCsum", "ベースライン")
 dsv("Lesion3m", "3ヵ月")
 dsv("Lesion6m", "6ヵ月")
 
-reduction_rate <- cbind(SBCsum, Lesion3m, Lesion6m)
+reduction_rate <- cbind(SBCsum, Lesion3m, Lesion6m) %>%
+  mutate(category = row.names(SBCsum)) %>%
+  select(category, everything())
 
 library(XLConnect)
 writeWorksheetToFile(file = paste0(outpath, "/R_output.xlsx"),
                      data = list(reduction_rate),
                      sheet = c("T018"),
                      startRow = c(5),
-                     startCol = c(2),
+                     startCol = c(1),
                      header = FALSE,
                      styleAction = XLC$"STYLE_ACTION.NONE")
 

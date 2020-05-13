@@ -2,8 +2,8 @@
 # Program : pfs.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/11
-# Version : 000.20.05.11
+# Published : 2020/05/13
+# Version : 001.20.05.13
 ##################################################
 
 library(readxl)
@@ -107,7 +107,7 @@ writeWorksheetToFile(file = paste0(outpath, "/R_output.xlsx"),
                      styleAction = XLC$"STYLE_ACTION.NONE")
 
 SurvivalRate <- function(x, y, z, g){
-  list1 <- summary(x, times = c(365*(1:3)), extend = FALSE)
+  list1 <- summary(x, times = c(365*(1:3)), extend = TRUE)
   df1 <- with(list1, data.frame(strata, time, surv, lower, upper))
   df1$surv_rate <- paste0(format(round((df1$surv)*100, digits = 1), nsmall = 1),
                           " (",
@@ -147,7 +147,7 @@ T014 <- T014[c("治癒切除・non-Chemotherapy群", "治癒切除・Chemotherap
 NumberOfGroup <- function(g, DFName){
   dfCountN <- ptdata %>%
     mutate(count = "例数") %>%
-    select("count", g) %>%
+    select("count", all_of(g)) %>%
     table %>%
     as.data.frame.matrix
   for (i in 1:ncol(dfCountN)) {dfCountN["例数", i] <- paste0("(n=", dfCountN["例数", i], ")")}

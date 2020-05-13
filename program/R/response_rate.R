@@ -2,8 +2,8 @@
 # Program : response_rate.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/12
-# Version : 000.20.05.12
+# Published : 2020/05/13
+# Version : 001.20.05.13
 ##################################################
 
 library(readxl)
@@ -37,24 +37,26 @@ ptdata3 <- ptdata3 %>%
   drop_na(chemCAT)
 
 dfCategory <- data.frame(category = matrix(unlist(strsplit("CR,PR,SD,PD,NE", ","))))
-dfVarList1 <- data.frame(colnames = matrix(unlist(strsplit("治療なし", ","))))
-dfVarList2 <- data.frame(VarList = matrix(unlist(strsplit("UFT+LV/S-1,FOLFOX,CapeOX,5'DFUR/capecitabine,Other.regimens,治療なし", ","))))
-df2 <- data.frame(t(dfVarList2[-1]))
-for (i in 1:ncol(df2)) {colnames(df2)[i] <- as.character(dfVarList2[i, 1])}
-a <- bind_rows(df2, noquote("RECISTORRES2"))
 
 frequency <- function(x, y, z){
-  # dfCountN <- y %>%
-  #   mutate(count = "例数") %>%
-  #   drop_na("RECISTORRES") %>%
-  #   select("count", "chemCAT") %>%
-  #   table %>%
-  #   as.data.frame.matrix
+  # COLUMN VARIABLE LIST
   dfVarList1 <- data.frame(VarList = matrix(unlist(strsplit(z, ","))))
   dfVarList2 <- data.frame(t(dfVarList1[-1]))
   for (i in 1:ncol(dfVarList2)) {colnames(dfVarList2)[i] <- as.character(dfVarList1[i, 1])}
+  # TOTAL NUMBER OF EACH VARIABLE
+  dfCountN <- y %>%
+    mutate(count = "例数") %>%
+    drop_na("RECISTORRES") %>%
+    select("count", "chemCAT") %>%
+    table %>%
+    as.data.frame.matrix
+  dfCountN2 <- bind_rows(dfVarList2, dfCountN)
+  dfCountN2[is.na(dfCountN2)] <- 0
+  dfCountN2[] <- paste0("(n=", dfCountN2[], ")")
+  assign(paste0(x, "_Num"), dfCountN2, .GlobalEnv)
   # COUNT
   dfCount <- y %>%
+    drop_na("RECISTORRES") %>%
     select("RECISTORRES", "chemCAT") %>%
     table %>%
     as.data.frame.matrix
@@ -64,24 +66,23 @@ frequency <- function(x, y, z){
   dfPercent[] <- paste0("(", str_trim(format(unlist(dfPercent))), "%)")
   # CONCATENATION of dfCount and dfPercent
   for (i in 1:ncol(dfCount)) {dfCount[[i]] <- paste(dfCount[[i]], dfPercent[[i]])}
-  # dfCount <- rbind(dfCountN, dfCount)
-  df1 <- data.frame(category = rownames(dfCount), dfCount, stringsAsFactors = FALSE)
-  df2 <- merge(dfCategory, df1, by = "category", all = T)
+  df1 <- merge(dfCategory, dfCount, by.x = "category", by.y = "row.names", all = TRUE)
+  df2 <- bind_rows(dfVarList2, df1) %>%
+    arrange(match(category, c("CR","PR","SD","PD","NE"))) %>%
+    select(category, everything())
   df2[is.na(df2)] <- "0 (0.0%)"
-  df2 <- df2[c(1, 4, 5, 3, 2), ]
-  df3 <- bind_rows(dfVarList2, df2)
-  assign(x, df3, .GlobalEnv)
+  assign(x, df2, .GlobalEnv)
 }
 frequency("RECISTORRES1", ptdata1, "治療なし")
-frequency("RECISTORRES2", ptdata2, "UFT+LV.S-1,FOLFOX,CapeOX,5'DFUR.capecitabine,Other.regimens,治療なし")
-frequency("RECISTORRES3", ptdata3, "FOLFOX.CapeOX.SOX,FOLFOX+セツキシマブ,FOLFOX+ベバシズマブ,FOLFOX+パニツムマブ,FOLFIRI,FOLFIRI+セツキシマブ,FOLFIRI+ベバシズマブ,FOLFIRI+パニツムマブ,5FU+LV,Other.regimens,治療なし")
+frequency("RECISTORRES2", ptdata2, "UFT+LV/S-1,FOLFOX,CapeOX,5'DFUR/capecitabine,Other regimens,治療なし")
+frequency("RECISTORRES3", ptdata3, "FOLFOX/CapeOX/SOX,FOLFOX+セツキシマブ,FOLFOX+ベバシズマブ,FOLFOX+パニツムマブ,FOLFIRI,FOLFIRI+セツキシマブ,FOLFIRI+ベバシズマブ,FOLFIRI+パニツムマブ,5FU+LV,Other regimens,治療なし")
 
 library(XLConnect)
 writeWorksheetToFile(file = paste0(outpath, "/R_output.xlsx"),
-                     data = list(RECISTORRES1, RECISTORRES2, RECISTORRES3),
-                     sheet = c("T015", "T016", "T017"),
-                     startRow = c(6, 6, 6),
-                     startCol = c(1, 1, 1),
+                     data = list(RECISTORRES1, RECISTORRES2, RECISTORRES3, RECISTORRES1_Num, RECISTORRES2_Num, RECISTORRES3_Num),
+                     sheet = c("T015", "T016", "T017", "T015", "T016", "T017"),
+                     startRow = c(6, 6, 6, 5, 5, 5),
+                     startCol = c(1, 1, 1, 2, 2,2),
                      header = FALSE,
                      styleAction = XLC$"STYLE_ACTION.NONE")
 

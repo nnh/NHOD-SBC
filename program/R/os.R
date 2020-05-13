@@ -2,8 +2,8 @@
 # Program : os.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/11
-# Version : 000.20.05.11
+# Published : 2020/05/13
+# Version : 001.20.05.13
 ##################################################
 
 library(readxl)
@@ -125,7 +125,7 @@ T010 <- dfCount2[c("治癒切除・non-Chemotherapy群", "治癒切除・Chemoth
 NumberOfGroup <- function(g, DFName){
   dfCountN <- ptdata %>%
     mutate(count = "例数") %>%
-    select("count", g) %>%
+    select("count", all_of(g)) %>%
     table %>%
     as.data.frame.matrix
   for (i in 1:ncol(dfCountN)) {dfCountN["例数", i] <- paste0("(n=", dfCountN["例数", i], ")")}

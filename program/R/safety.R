@@ -2,8 +2,8 @@
 # Program : safety.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/04/20
-# Version : 000.20.05.01
+# Published : 2020/05/13
+# Version : 001.20.05.13
 ##################################################
 
 library(readxl)
