@@ -36,8 +36,8 @@ SAS version : 9.4
     run;
     proc format library=libads;
         value $FMT_SEX
-            0="’j«"
-            1="—«";
+            "M"="’j«"
+            "F"="—«";
     run;
     data ds_registration;
         set temp_registration;
