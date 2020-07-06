@@ -2,8 +2,8 @@
 # Program : reduction_rate.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/13
-# Version : 001.20.05.13
+# Published : 2020/06/17
+# Version : 001.20.06.17
 ##################################################
 
 library(readxl)
@@ -32,9 +32,9 @@ dsv <- function(x, y){
     summarise(n = n(),
               平均 = round(mean(eval(as.symbol(x))), digits = 1),
               標準偏差 = round(sd(eval(as.symbol(x))), digits = 1),
-              最大 = round(max(eval(as.symbol(x))), digits = 1),
-              最小 = round(min(eval(as.symbol(x))), digits = 1),
-              中央値 = round(median(eval(as.symbol(x))), digits = 1))
+              最大 = max(eval(as.symbol(x))),
+              最小 = min(eval(as.symbol(x))),
+              中央値 = median(eval(as.symbol(x))))
   df2 <- data.frame(t(df1))
   for (i in 1:ncol(df2)) {colnames(df2)[i] <- y}
   assign(x, df2, .GlobalEnv)

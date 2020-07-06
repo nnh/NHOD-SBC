@@ -2,8 +2,8 @@
 # Program : characteristics.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/13
-# Version : 001.20.05.13
+# Published : 2020/06/17
+# Version : 001.20.06.17
 ##################################################
 
 library(readxl)
@@ -21,7 +21,7 @@ rawpath <- paste0(prtpath, "/input/rawdata")
 outpath <- paste0(prtpath, "/output/R")
 
 ptdata <- read.csv(paste0(adspath, "/ptdata.csv"), na.strings = "")
-sexDF <- read.csv(paste0(rawpath, "/SBC_registration_190524_0949.csv"), na.strings = "")
+sexDF <- read.csv(paste0(rawpath, "/SBC_registration_200203_1042.csv"), na.strings = "")
 sexDF <- sexDF %>%
   select("症例登録番号", "性別") %>%
   rename(SUBJID = 症例登録番号, sex = 性別)
@@ -52,9 +52,10 @@ dsv <- function(x, y){
     drop_na(group) %>%
     select(all_of(x)) %>%
     mutate_all(~na_if(., -1)) %>%
+    drop_na(all_of(x)) %>%
     group_by(例数 = n(), add = TRUE) %>%
     summarise_all(list(平均 = mean, 標準偏差 = sd, 中央値 = median, 最小値 = min, 最大値 = max), na.rm = TRUE) %>%
-    mutate_if(is.numeric, round, 1)
+    mutate_at(c("平均", "標準偏差"), round, 1)
   dfTotal2 <- data.frame(t(dfTotal1))
   colnames(dfTotal2) <- "全体"
   # Group
@@ -62,10 +63,11 @@ dsv <- function(x, y){
     select(all_of(x), "group") %>%
     mutate_all(~na_if(., -1)) %>%
     drop_na(group) %>%
+    drop_na(all_of(x)) %>%
     group_by(group) %>%
     group_by(例数 = n(), add = TRUE) %>%
     summarise_all(list(平均 = mean, 標準偏差 = sd, 中央値 = median, 最小値 = min, 最大値 = max), na.rm = TRUE) %>%
-    mutate_if(is.numeric, round, 1)
+    mutate_at(c("平均", "標準偏差"), round, 1)
   df2 <- data.frame(t(df1[-1]))
   for (i in 1:ncol(df2)) {colnames(df2)[i] <- (df1[i, 1])}
   df2 <- df2[c("治癒切除・non-Chemotherapy群", "治癒切除・Chemotherapy群", "治癒未切除・non-Chemotherapy群", "治癒未切除・Chemotherapy群")]
@@ -83,12 +85,14 @@ frequency <- function(x, y, z){
   dfCategory <- data.frame(category = matrix(unlist(strsplit(z, ","))))
   dfCountN <- ptdata %>%
     mutate(count = "例数") %>%
+    drop_na(all_of(x)) %>%
     select("count", "group") %>%
     table %>%
     as.data.frame.matrix
   dfCountN$全体 <- rowSums(dfCountN)
   # Count
   dfCount <- ptdata %>%
+    drop_na(all_of(x)) %>%
     select(all_of(x), "group") %>%
     table %>%
     as.data.frame.matrix
@@ -123,6 +127,7 @@ frequency("metaYN", "転移臓器", "あり,なし,不明")
 frequency_true <- function(x,y){
   dfCategory <- data.frame(category = c("TRUE", "FALSE"))
   dfCount <- ptdata %>%
+    drop_na(all_of(x)) %>%
     select(all_of(x), "group") %>%
     table %>%
     as.data.frame.matrix
@@ -185,7 +190,7 @@ setCellStyle(Excelwb,
              cellstyle = Style1)
 setCellStyle(Excelwb,
              sheet = "L001",
-             row = 20,
+             row = 27,
              col = 1:2,
              cellstyle = Style1)
 saveWorkbook(Excelwb)

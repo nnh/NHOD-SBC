@@ -2,8 +2,8 @@
 # Program : pfs.R
 # Study : NHOD-SBC
 # Author : Kato Kiroku
-# Published : 2020/05/13
-# Version : 001.20.05.13
+# Published : 2020/06/17
+# Version : 001.20.06.17
 ##################################################
 
 library(readxl)
@@ -147,6 +147,7 @@ T014 <- T014[c("治癒切除・non-Chemotherapy群", "治癒切除・Chemotherap
 NumberOfGroup <- function(g, DFName){
   dfCountN <- ptdata %>%
     mutate(count = "例数") %>%
+    drop_na(event) %>%
     select("count", all_of(g)) %>%
     table %>%
     as.data.frame.matrix
