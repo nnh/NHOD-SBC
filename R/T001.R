@@ -49,4 +49,4 @@ T001 <- hyou1 %>%
   modify_footnote(update = everything() ~ NA) %>%   
   modify_header(label = "") %>% 
   as_tibble() %>% add_header_lines("症例の内訳と中止例集計") %>% 
-  write.csv("\\\\172.16.0.222/Stat/Trials/NHO/NHOD-SBC/program/second/NHOD_SBC_output/T001.csv", row.names = F) 
+  write.csv(".csv", row.names = F) 
